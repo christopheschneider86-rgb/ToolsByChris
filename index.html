@@ -45,7 +45,7 @@
         /* ── Typografie ── */
         h1 { font-size: 34px; color: #f1c40f; text-shadow: 2px 2px 0 #000; margin-bottom: 4px; }
         h2 { font-size: 26px; color: #f1c40f; text-shadow: 2px 2px 0 #000; margin-bottom: 10px; }
-        .subtitle { font-size: 14px; color: #bdc3c7; margin-bottom: 16px; }
+        .subtitle { font-size: 14px; color: #bdc3c7; margin-bottom: 12px; }
 
         /* ── Buttons ── */
         .btn {
@@ -64,6 +64,17 @@
         .btn-orange { background: #e67e22; }
         .btn-gray   { background: #636e72; font-size: 15px; padding: 10px 20px; }
         .btn-red    { background: #c0392b; }
+
+        /* ── Schwierigkeitsgrad ── */
+        .diff-selector {
+            display: flex; justify-content: center; gap: 8px; margin-bottom: 15px;
+        }
+        .btn-diff {
+            background: rgba(255,255,255,0.1); border: 2px solid transparent;
+            color: white; padding: 8px 12px; border-radius: 20px; font-family: inherit;
+            font-size: 14px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-diff.active { background: rgba(255,255,255,0.25); border-color: #f1c40f; font-weight: bold; }
 
         /* ── HUD im Spiel ── */
         #hud {
@@ -91,7 +102,7 @@
         /* ── Mainpage Highscore ── */
         .hs-table {
             width: 100%; border-collapse: collapse;
-            font-size: 16px; margin: 10px 0 16px 0;
+            font-size: 16px; margin: 5px 0 16px 0;
         }
         .hs-table th {
             background: rgba(241,196,15,0.2);
@@ -100,7 +111,7 @@
         .hs-table td { padding: 7px 5px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .hs-table tr:nth-child(even) td { background: rgba(255,255,255,0.04); }
         .hs-rank { color: #f1c40f; font-weight: bold; font-size: 18px; }
-        .no-score { color: #636e72; font-size: 15px; padding: 10px 0; }
+        .no-score { color: #636e72; font-size: 14px; padding: 10px 0; }
 
         /* ── Anleitung ── */
         .rule-box {
@@ -125,7 +136,14 @@
     ═══════════════════════════════ -->
     <div id="pageMain" class="page page-bg active">
         <h1>🏆 Mathe-Hüpfer</h1>
-        <p class="subtitle">Dein persönlicher Highscore</p>
+        <p class="subtitle">Wähle deine Schwierigkeit:</p>
+
+        <!-- SCHWIERIGKEITS-WAHL -->
+        <div class="diff-selector">
+            <button id="btnEasy" class="btn-diff" onclick="changeDiff('easy')">🟢 Leicht</button>
+            <button id="btnNormal" class="btn-diff active" onclick="changeDiff('normal')">🟡 Normal</button>
+            <button id="btnHard" class="btn-diff" onclick="changeDiff('hard')">🔴 Schwer</button>
+        </div>
 
         <table class="hs-table">
             <thead>
@@ -214,6 +232,36 @@ if('serviceWorker' in navigator) {
 }
 
 // ══════════════════════════════════════════════
+// PHYSIK & SCHWIERIGKEIT
+// ══════════════════════════════════════════════
+const DIFF_SETTINGS = {
+    easy:   { g: 0.15, j: -7,  s: -11.5, r: -12, ms: 5 },
+    normal: { g: 0.20, j: -8,  s: -13.5, r: -15, ms: 6.5 },
+    hard:   { g: 0.25, j: -9,  s: -15,   r: -18, ms: 8 }
+};
+
+let currentDifficulty = 'normal';
+let BASE_GRAVITY = DIFF_SETTINGS.normal.g;
+let JUMP = DIFF_SETTINGS.normal.j;
+let SPRING = DIFF_SETTINGS.normal.s;
+let ROCKET_SPD = DIFF_SETTINGS.normal.r;
+let MOVE_SPEED = DIFF_SETTINGS.normal.ms;
+
+function changeDiff(diff) {
+    currentDifficulty = diff;
+    document.querySelectorAll('.btn-diff').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn' + diff.charAt(0).toUpperCase() + diff.slice(1)).classList.add('active');
+    
+    BASE_GRAVITY = DIFF_SETTINGS[diff].g;
+    JUMP = DIFF_SETTINGS[diff].j;
+    SPRING = DIFF_SETTINGS[diff].s;
+    ROCKET_SPD = DIFF_SETTINGS[diff].r;
+    MOVE_SPEED = DIFF_SETTINGS[diff].ms;
+
+    renderHighscores();
+}
+
+// ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
 const PAGES = ['pageMain','pageMenu','pageHelp'];
@@ -230,40 +278,45 @@ function showPage(id) {
 }
 
 // ══════════════════════════════════════════════
-// HIGHSCORE
+// HIGHSCORE (mit Schwierigkeitsgrad!)
 // ══════════════════════════════════════════════
-const HS_KEYS = {
-    addsub: { label: '➕ Addition & Subtraktion', key: 'hs_addsub' },
-    muldiv: { label: '✖️ Multiplikation & Division', key: 'hs_muldiv' },
-    mixed:  { label: '🎲 Gemischt',                key: 'hs_mixed'  },
+const HS_MODES = {
+    addsub: '➕ Addition & Subtraktion',
+    muldiv: '✖️ Multiplikation & Division',
+    mixed:  '🎲 Gemischt'
 };
-function getHS(mode) { return parseInt(localStorage.getItem(HS_KEYS[mode].key)||'0'); }
-function setHS(mode, val) { localStorage.setItem(HS_KEYS[mode].key, val); }
+function getHS(mode, diff) { return parseInt(localStorage.getItem(`hs_${mode}_${diff}`)||'0'); }
+function setHS(mode, diff, val) { localStorage.setItem(`hs_${mode}_${diff}`, val); }
 
 function renderHighscores() {
     const tbody = document.getElementById('hsBody');
     tbody.innerHTML = '';
     let any = false;
-    Object.entries(HS_KEYS).forEach(([mode, info], i) => {
-        const hs = getHS(mode);
-        const medals = ['🥇','🥈','🥉'];
+    const medals = ['🥇','🥈','🥉'];
+    let i = 0;
+
+    Object.entries(HS_MODES).forEach(([mode, label]) => {
+        const hs = getHS(mode, currentDifficulty);
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${info.label}</td>
+            <td>${label}</td>
             <td class="hs-rank">${hs > 0 ? medals[i]+' '+hs : '–'}</td>`;
         tbody.appendChild(tr);
         if(hs > 0) any = true;
+        i++;
     });
     if(!any) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="2" class="no-score">Noch keine Highscores – spiel los! 🚀</td>`;
+        tr.innerHTML = `<td colspan="2" class="no-score">Keine Highscores auf diesem Level. Leg los! 🚀</td>`;
         tbody.appendChild(tr);
     }
 }
 
 function clearHighscores() {
-    if(confirm('Alle Highscores wirklich löschen?')) {
-        Object.values(HS_KEYS).forEach(info => localStorage.removeItem(info.key));
+    if(confirm('Alle Highscores auf allen Schwierigkeiten wirklich löschen?')) {
+        Object.keys(HS_MODES).forEach(mode => {
+            ['easy','normal','hard'].forEach(diff => localStorage.removeItem(`hs_${mode}_${diff}`));
+        });
         renderHighscores();
     }
 }
@@ -303,7 +356,6 @@ const hudHigh = document.getElementById('hudHigh');
 const toast = document.getElementById('gadgetToast');
 const pageGO = document.getElementById('pageGameOver');
 
-const BASE_GRAVITY=0.25, JUMP=-9, SPRING=-15, ROCKET_SPD=-18;
 let gameRunning=false, currentMode='mixed';
 let score=0, highScore=0;
 let multi=1, shield=false, slow=false, slowT=0, starT=0;
@@ -365,20 +417,19 @@ function activateGadget(id){
     else if(id==='slow'){playSound('slow');slow=true;slowT=180;showToast('❄️ Zeitlupe!');}
 }
 
-// Tastatur
+// Tastatur & Touch
 const keys={};
 window.addEventListener('keydown',e=>keys[e.key]=true);
 window.addEventListener('keyup',e=>keys[e.key]=false);
 canvas.addEventListener('mousemove',e=>{targetX=e.clientX-canvas.getBoundingClientRect().left;});
 canvas.addEventListener('touchmove',e=>{e.preventDefault();targetX=e.touches[0].clientX-canvas.getBoundingClientRect().left;},{passive:false});
 
-// ── Höhenzähler: akkumuliert echte Pixel, zeigt aber /20 an ──
-let rawHeight = 0; // Summierte Pixel nach oben
+let rawHeight = 0; 
 
 function update(){
     if(!gameRunning) return;
     const gravity = slow ? BASE_GRAVITY*0.45 : BASE_GRAVITY;
-    const ms      = slow ? 4 : 8;
+    const ms      = slow ? MOVE_SPEED*0.6 : MOVE_SPEED;
 
     if(keys['ArrowLeft']||keys['a'])  targetX -= ms;
     if(keys['ArrowRight']||keys['d']) targetX += ms;
@@ -429,7 +480,6 @@ function update(){
     if(player.y < mid){
         const diff = mid - player.y;
         player.y = mid;
-        // Höhenzähler: rohe Pixel akkumulieren, skaliert /20 anzeigen
         rawHeight += diff;
         score = Math.floor(rawHeight / 20) * multi;
         hudScore.innerText = 'Höhe: '+score;
@@ -440,15 +490,14 @@ function update(){
         platforms.forEach(p=>p.y+=diff);
     }
 
-    // Alte Plattformen entfernen, neue generieren
     platforms = platforms.filter(p=>p.y < canvas.height+60);
     if(platforms[platforms.length-1].y > 100) createFloor(platforms[platforms.length-1].y-115);
 
     // Game Over
     if(player.y > canvas.height){
         gameRunning=false;
-        const prev = getHS(currentMode);
-        if(score > prev) setHS(currentMode, score);
+        const prev = getHS(currentMode, currentDifficulty);
+        if(score > prev) setHS(currentMode, currentDifficulty, score);
         document.getElementById('goScore').innerText = 'Erreichte Höhe: '+score;
         document.getElementById('goHigh').innerText  = score>prev ? '🎉 Neuer Highscore!' : 'Highscore: '+Math.max(score,prev);
         pageGO.style.display='flex';
@@ -529,7 +578,7 @@ function draw(){
 function startGame(mode){
     if(audioCtx.state==='suspended') audioCtx.resume();
     currentMode = mode;
-    highScore   = getHS(mode);
+    highScore   = getHS(mode, currentDifficulty);
     PAGES.forEach(p=>document.getElementById(p).style.display='none');
     pageGO.style.display='none';
     hud.style.display='flex';
@@ -555,12 +604,11 @@ function pauseToMain(){
     showPage('pageMain');
 }
 
-// Audio-Unlock
 document.body.addEventListener('click',()=>{if(audioCtx.state==='suspended')audioCtx.resume();},{once:true});
 document.body.addEventListener('touchstart',()=>{if(audioCtx.state==='suspended')audioCtx.resume();},{once:true});
 
 // Init
-renderHighscores();
+changeDiff('normal'); // Startet standardmäßig auf "Normal"
 draw();
 </script>
 </body>
