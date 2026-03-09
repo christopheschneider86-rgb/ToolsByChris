@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO2-Jahresrechner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --blue: #1a73e8; --green: #34a853; --red: #ea4335; --bg: #f4f6f9; --card: #fff; --text: #2c3e50; --muted: #7f8c8d; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        .app { max-width: 960px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 1.8em; color: var(--blue); margin-bottom: 4px; }
+        .subtitle { text-align: center; color: var(--muted); font-size: 0.9em; margin-bottom: 24px; }
+        .card { background: var(--card); border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 20px; }
+        .card-title { display: flex; align-items: center; gap: 10px; font-size: 1.1em; font-weight: 700; color: var(--blue); border-bottom: 2px solid var(--bg); padding-bottom: 12px; margin-bottom: 18px; }
+        .card-title i { width: 20px; text-align: center; }
+        .row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+        .row:last-child { margin-bottom: 0; }
+        .row-label { font-weight: 500; font-size: 0.9em; min-width: 170px; color: var(--text); }
+        .row-label small { display: block; color: var(--muted); font-weight: 400; font-size: 0.82em; }
+        .controls { display: flex; align-items: center; gap: 10px; flex: 1; flex-wrap: wrap; }
+        input[type=range] { flex: 1; min-width: 100px; max-width: 220px; accent-color: var(--blue); }
+        input[type=number], select { padding: 8px 10px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 0.9em; background: #fff; }
+        input[type=number] { width: 80px; }
+        input[type=checkbox] { transform: scale(1.3); accent-color: var(--blue); cursor: pointer; }
+        .lv { font-weight: 700; color: var(--blue); min-width: 70px; text-align: right; font-size: 0.95em; white-space: nowrap; }
+        .lv.neg { color: var(--green); }
+        .dyn-list { background: var(--bg); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+        .dyn-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; background: white; padding: 8px 10px; border-radius: 8px; border: 1px solid #eee; }
+        .dyn-item:last-child { margin-bottom: 0; }
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.88em; font-weight: 600; transition: 0.2s; }
+        .btn-add { background: var(--green); color: white; }
+        .btn-add:hover { background: #2e9d49; }
+        .btn-remove { background: white; color: var(--red); border: 1.5px solid var(--red); padding: 5px 10px; }
+        .btn-remove:hover { background: var(--red); color: white; }
+        .btn-blue { background: var(--blue); color: white; }
+        .btn-blue:hover { background: #1557b0; }
+        .btn-outline { background: white; color: var(--blue); border: 1.5px solid var(--blue); }
+        .btn-outline:hover { background: var(--blue); color: white; }
+        .btn-gray { background: var(--muted); color: white; }
+        .btn-danger { background: var(--red); color: white; }
+        .info-text { font-size: 0.8em; color: var(--muted); }
+
+        /* Result */
+        #result-card { background: linear-gradient(135deg, #1a73e8, #0f9d58); color: white; border-radius: 16px; padding: 28px; margin-bottom: 20px; }
+        .result-total { font-size: 3.2em; font-weight: 800; line-height: 1; margin: 8px 0; }
+        .result-sub { font-size: 1em; opacity: 0.9; margin-bottom: 20px; }
+        .bar-wrap { background: rgba(255,255,255,0.25); border-radius: 8px; overflow: hidden; height: 18px; display: flex; margin-bottom: 16px; }
+        .bar-seg { height: 100%; transition: width 0.35s ease; }
+        .legend { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 0.82em; }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+        /* Profiles */
+        #profile-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; background: white; padding: 14px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+        #profile-bar h3 { font-size: 0.95em; color: var(--muted); margin-right: 4px; }
+        .profile-chip { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--blue); font-size: 0.85em; cursor: pointer; background: white; color: var(--blue); font-weight: 600; transition: 0.2s; }
+        .profile-chip.active { background: var(--blue); color: white; }
+        #profile-name { padding: 8px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 0.9em; width: 150px; }
+
+        /* Export */
+        #export-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <h1><i class="fas fa-seedling"></i> CO2-Jahresrechner</h1>
+    <p class="subtitle">Berechne deinen persönlichen Fußabdruck für ein Jahr &mdash; DE-Durchschnitt: ~10.400 kg CO2</p>
+
+    <!-- PROFILE BAR -->
+    <div id="profile-bar">
+        <h3><i class="fas fa-user"></i> Profil:</h3>
+        <input type="text" id="profile-name" placeholder="Profilname eingeben">
+        <button class="btn btn-blue" onclick="saveProfile()"><i class="fas fa-save"></i> Speichern</button>
+        <div id="profile-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+
+    <!-- EXPORT BAR -->
+    <div id="export-bar">
+        <button class="btn btn-outline" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF Export</button>
+        <button class="btn btn-outline" onclick="exportPNG()"><i class="fas fa-image"></i> Als Bild speichern</button>
+        <button class="btn btn-outline" onclick="sharePage()"><i class="fas fa-share-alt"></i> Teilen</button>
+    </div>
+
+    <!-- RESULT -->
+    <div id="result-card">
+        <div style="font-size:0.95em;opacity:0.85;margin-bottom:4px;">Dein Jahres-Fußabdruck</div>
+        <div class="result-total" id="r-total">0 kg</div>
+        <div class="result-sub" id="r-compare">Werte werden berechnet...</div>
+        <div class="bar-wrap" id="r-bar"></div>
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background:#f1c40f"></div>Wohnen: <b id="l-wohnen">0</b> kg</div>
+            <div class="legend-item"><div class="dot" style="background:#e67e22"></div>Pendeln: <b id="l-pendeln">0</b> kg</div>
+            <div class="legend-item"><div class="dot" style="background:#e74c3c"></div>Reisen: <b id="l-reisen">0</b> kg</div>
+            <div class="legend-item"><div class="dot" style="background:#2ecc71"></div>Essen: <b id="l-essen">0</b> kg</div>
+            <div class="legend-item"><div class="dot" style="background:#9b59b6"></div>Digital: <b id="l-digital">0</b> kg</div>
+            <div class="legend-item"><div class="dot" style="background:#1abc9c"></div>Fixe: <b id="l-fix">0</b> kg</div>
+        </div>
+    </div>
+
+    <!-- 1. HAUSHALT BASIS -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-home"></i> Wohnen & Energie</div>
+
+        <div class="row">
+            <div class="row-label">Personen im Haushalt</div>
+            <div class="controls">
+                <input type="number" id="personen" value="2" min="1" max="10">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Heizungsart</div>
+            <div class="controls">
+                <select id="heizung">
+                    <option value="2500">Gasheizung</option>
+                    <option value="3500">Ölheizung</option>
+                    <option value="2000">Fernwärme</option>
+                    <option value="1200">Wärmepumpe</option>
+                    <option value="400">Holz / Pellets</option>
+                    <option value="200">Wärmepumpe + Ökostrom</option>
+                </select>
+                <span class="lv" id="lv-heizung">0 kg</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Stromverbrauch (kWh/Jahr)<small>Ø Haushalt ~2.500–3.500 kWh</small></div>
+            <div class="controls">
+                <input type="range" id="strom-kwh" min="500" max="8000" value="3000" step="100" oninput="syncNum('strom-kwh','strom-kwh-n');calc()">
+                <input type="number" id="strom-kwh-n" value="3000" oninput="syncRange('strom-kwh-n','strom-kwh');calc()">
+                <select id="strom-typ">
+                    <option value="0.400">Normaler Strommix</option>
+                    <option value="0.050">Ökostrom (zertifiziert)</option>
+                </select>
+                <span class="lv" id="lv-strom">0 kg</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. TRANSPORT -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-route"></i> Transport & Pendeln</div>
+
+        <div class="row">
+            <div class="row-label">Arbeitstage / Jahr<small>Abzügl. Urlaub & Feiertage</small></div>
+            <div class="controls">
+                <input type="number" id="arbeitstage" value="220" min="0" max="365">
+                <span class="info-text">Homeoffice:</span>
+                <input type="number" id="homeoffice" value="40" min="0" max="365" style="width:70px;">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Pendelweg (einfach, km)</div>
+            <div class="controls">
+                <input type="range" id="pendel-km" min="0" max="100" value="15" oninput="syncNum('pendel-km','pendel-km-n');calc()">
+                <input type="number" id="pendel-km-n" value="15" oninput="syncRange('pendel-km-n','pendel-km');calc()" style="width:70px;">
+                <select id="pendel-modus">
+                    <option value="0.146">Auto Benzin (146g/km)</option>
+                    <option value="0.130">Auto Diesel (130g/km)</option>
+                    <option value="0.089">E-Auto (89g/km)</option>
+                    <option value="0.060">Bus/Bahn Nah (60g/km)</option>
+                    <option value="0.031">Zug Fern (31g/km)</option>
+                    <option value="0.003">E-Bike (3g/km)</option>
+                    <option value="0">Fahrrad / Zu Fuß</option>
+                </select>
+                <span class="lv" id="lv-pendeln">0 kg</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Fahrgemeinschaft?</div>
+            <div class="controls">
+                <input type="checkbox" id="carpool">
+                <span class="info-text">Teilt Auto-Emissionen durch 2</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Sonstige Fahrten / Jahr<small>Einkaufen, Freizeit etc.</small></div>
+            <div class="controls">
+                <input type="range" id="sonst-km" min="0" max="20000" value="3000" step="500" oninput="syncNum('sonst-km','sonst-km-n');calc()">
+                <input type="number" id="sonst-km-n" value="3000" oninput="syncRange('sonst-km-n','sonst-km');calc()">
+                <span class="info-text">km/Jahr mit Auto</span>
+                <span class="lv" id="lv-sonst">0 kg</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. REISEN -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-plane"></i> Urlaub & Reisen</div>
+        <div class="dyn-list" id="reise-list"></div>
+        <button class="btn btn-add" onclick="addReise()"><i class="fas fa-plus"></i> Reise hinzufügen</button>
+    </div>
+
+    <!-- 4. ERNAEHRUNG -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-utensils"></i> Ernährung</div>
+
+        <div class="row">
+            <div class="row-label">Persönliches Profil</div>
+            <div class="controls">
+                <select id="person-typ">
+                    <option value="1.0">Erwachsener Mann</option>
+                    <option value="0.85">Erwachsene Frau</option>
+                    <option value="0.6">Kind (6–12 Jahre)</option>
+                    <option value="0.8">Jugendliche/r</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">Ernährungsweise</div>
+            <div class="controls">
+                <select id="ernaehrung">
+                    <option value="2000">Viel Fleisch (täglich)</option>
+                    <option value="1700">Fleisch mehrmals/Woche</option>
+                    <option value="1400" selected>Wenig Fleisch (1–2x/Woche)</option>
+                    <option value="1100">Sehr wenig Fleisch</option>
+                    <option value="900">Vegetarisch</option>
+                    <option value="700">Vegan</option>
+                </select>
+                <span class="lv" id="lv-essen">0 kg</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. DIGITAL -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-laptop"></i> Digitaler Konsum</div>
+
+        <div class="row">
+            <div class="row-label">Streaming (Std./Tag)<small>Netflix, YouTube etc.</small></div>
+            <div class="controls">
+                <input type="range" id="streaming" min="0" max="8" value="2" step="0.5" oninput="syncNum('streaming','streaming-n');calc()">
+                <input type="number" id="streaming-n" value="2" step="0.5" oninput="syncRange('streaming-n','streaming');calc()" style="width:60px;">
+                <span class="info-text">Std./Tag</span>
+                <span class="lv" id="lv-streaming">0 kg</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">KI-Nutzung (Anfragen/Tag)<small>ChatGPT, Copilot etc.</small></div>
+            <div class="controls">
+                <input type="range" id="ki" min="0" max="100" value="5" oninput="syncNum('ki','ki-n');calc()">
+                <input type="number" id="ki-n" value="5" oninput="syncRange('ki-n','ki');calc()" style="width:60px;">
+                <span class="info-text">Anfragen/Tag (~10g CO2 je Anfrage)</span>
+                <span class="lv" id="lv-ki">0 kg</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="row-label">E-Mails / Tag<small>inkl. Spam & Anhänge</small></div>
+            <div class="controls">
+                <input type="range" id="email" min="0" max="200" value="40" oninput="syncNum('email','email-n');calc()">
+                <input type="number" id="email-n" value="40" oninput="syncRange('email-n','email');calc()" style="width:60px;">
+                <span class="lv" id="lv-email">0 kg</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. FIXE WERTE -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-cube"></i> Fixe Werte (Herstellung, auf 1 Jahr)</div>
+        <p class="info-text" style="margin-bottom:12px;">Herstellungs-CO2 geteilt durch Nutzungsjahre = dein Jahresanteil. Bei geteilten Gütern wird durch Haushaltsgröße geteilt.</p>
+        <div class="dyn-list" id="fix-list"></div>
+        <button class="btn btn-add" onclick="addFix()"><i class="fas fa-plus"></i> Gegenstand hinzufügen</button>
+    </div>
+
+</div><!-- end .app -->
+
+<script>
+// ─── HILFSFUNKTIONEN ─────────────────────────────────────────────
+function syncNum(rangeId, numId) {
+    document.getElementById(numId).value = document.getElementById(rangeId).value;
+}
+function syncRange(numId, rangeId) {
+    document.getElementById(rangeId).value = document.getElementById(numId).value;
+}
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function sel(id) { return document.getElementById(id).value; }
+function checked(id) { return document.getElementById(id).checked; }
+
+// ─── REISEN ──────────────────────────────────────────────────────
+const reiseModi = {
+    "Flug Kurzstrecke (<3h)": 0.255,
+    "Flug Mittelstrecke (3–6h)": 0.195,
+    "Flug Langstrecke (>6h)": 0.150,
+    "Auto Benzin": 0.146,
+    "Auto Diesel": 0.130,
+    "E-Auto": 0.089,
+    "Motorrad": 0.113,
+    "Zug / Fernbus": 0.031,
+    "E-Bike": 0.003
+};
+let reiseCount = 0;
+function addReise() {
+    const id = reiseCount++;
+    const opts = Object.entries(reiseModi).map(([k]) => `<option value="${k}">${k}</option>`).join('');
+    const div = document.createElement('div');
+    div.className = 'dyn-item';
+    div.id = `r-${id}`;
+    div.innerHTML = `
+        <select id="r-mod-${id}" onchange="calc()">${opts}</select>
+        <input type="number" id="r-km-${id}" value="1000" min="0" style="width:90px;" oninput="calc()"> km
+        <button class="btn btn-remove" onclick="document.getElementById('r-${id}').remove();calc()"><i class="fas fa-trash-alt"></i></button>
+    `;
+    document.getElementById('reise-list').appendChild(div);
+    calc();
+}
+
+// ─── FIXE WERTE ──────────────────────────────────────────────────
+// Wert = kg CO2 Herstellung / Nutzungsjahre = kg/Jahr
+const fixModi = {
+    "Auto (Verbrenner)":   { kg: 530,  info: "8.000kg / 15J" },
+    "E-Auto":              { kg: 800,  info: "12.000kg / 15J" },
+    "Motorrad":            { kg: 200,  info: "3.000kg / 15J" },
+    "E-Bike":              { kg: 40,   info: "400kg / 10J" },
+    "Fahrrad":             { kg: 15,   info: "150kg / 10J" },
+    "Photovoltaikanlage":  { kg: 167,  info: "5.000kg / 30J, anteilig" },
+    "Laptop / PC":         { kg: 40,   info: "400kg / 10J" },
+    "Smartphone":          { kg: 70,   info: "70kg / 1J Abzug/Neu" },
+    "Kühlschrank / Herd":  { kg: 50,   info: "500kg / 10J" },
+    "Wohnung (Bau)":       { kg: 650,  info: "20.000kg / 30J" },
+    "Haus (Bau)":          { kg: 1667, info: "50.000kg / 30J" }
+};
+let fixCount = 0;
+function addFix() {
+    const id = fixCount++;
+    const opts = Object.entries(fixModi).map(([k,v]) => `<option value="${k}">${k} (${v.info})</option>`).join('');
+    const div = document.createElement('div');
+    div.className = 'dyn-item';
+    div.id = `f-${id}`;
+    div.innerHTML = `
+        <select id="f-mod-${id}" onchange="calc()">${opts}</select>
+        <label style="font-size:0.85em;white-space:nowrap;">
+            <input type="checkbox" id="f-share-${id}" checked onchange="calc()"> geteilt
+        </label>
+        <span class="lv" id="f-lv-${id}" style="min-width:60px;">0 kg</span>
+        <button class="btn btn-remove" onclick="document.getElementById('f-${id}').remove();calc()"><i class="fas fa-trash-alt"></i></button>
+    `;
+    document.getElementById('fix-list').appendChild(div);
+    calc();
+}
+
+// ─── BERECHNUNG ──────────────────────────────────────────────────
+const COLORS = { wohnen:"#f1c40f", pendeln:"#e67e22", reisen:"#e74c3c", essen:"#2ecc71", digital:"#9b59b6", fix:"#1abc9c", infra:"#95a5a6" };
+
+function calc() {
+    const personen = Math.max(1, parseInt(document.getElementById('personen').value) || 1);
+
+    // Wohnen
+    const heizung = parseFloat(sel('heizung'));
+    const stromKwh = v('strom-kwh');
+    const stromFaktor = parseFloat(sel('strom-typ'));
+    const strom = stromKwh * stromFaktor;
+    const wohnen = heizung + strom;
+    document.getElementById('lv-heizung').innerText = Math.round(heizung) + ' kg';
+    document.getElementById('lv-strom').innerText = Math.round(strom) + ' kg';
+
+    // Pendeln
+    const pendeltage = Math.max(0, v('arbeitstage') - v('homeoffice'));
+    const pendelKm = v('pendel-km');
+    const pendelFaktor = parseFloat(sel('pendel-modus'));
+    const carpoolDiv = (checked('carpool') && pendelFaktor > 0.05) ? 2 : 1;
+    const pendeln = Math.round(pendeltage * pendelKm * 2 * pendelFaktor / carpoolDiv);
+    const sonst = Math.round(v('sonst-km') * 0.146);
+    const alltagTotal = pendeln + sonst;
+    document.getElementById('lv-pendeln').innerText = pendeln + ' kg';
+    document.getElementById('lv-sonst').innerText = sonst + ' kg';
+
+    // Reisen
+    let reisen = 0;
+    document.querySelectorAll('[id^="r-"]').forEach(el => {
+        const id = el.id.replace('r-','');
+        const modEl = document.getElementById(`r-mod-${id}`);
+        const kmEl = document.getElementById(`r-km-${id}`);
+        if (modEl && kmEl) {
+            const mod = modEl.value;
+            const km = parseFloat(kmEl.value) || 0;
+            reisen += km * reiseModi[mod];
+        }
+    });
+    reisen = Math.round(reisen);
+
+    // Essen
+    const ernBase = parseFloat(sel('ernaehrung'));
+    const personTyp = parseFloat(sel('person-typ'));
+    const essen = Math.round(ernBase * personTyp);
+    document.getElementById('lv-essen').innerText = essen + ' kg';
+
+    // Digital
+    const streamingKg = Math.round(v('streaming') * 365 * 0.036);
+    const kiKg = Math.round(v('ki') * 365 * 0.010);
+    const emailKg = Math.round(v('email') * 365 * 0.004);
+    const digital = streamingKg + kiKg + emailKg;
+    document.getElementById('lv-streaming').innerText = streamingKg + ' kg';
+    document.getElementById('lv-ki').innerText = kiKg + ' kg';
+    document.getElementById('lv-email').innerText = emailKg + ' kg';
+
+    // Fix
+    let fix = 0;
+    document.querySelectorAll('[id^="f-"]').forEach(el => {
+        const id = el.id.replace('f-','');
+        const modEl = document.getElementById(`f-mod-${id}`);
+        const shareEl = document.getElementById(`f-share-${id}`);
+        const lvEl = document.getElementById(`f-lv-${id}`);
+        if (modEl && shareEl) {
+            const mod = modEl.value;
+            const baseKg = fixModi[mod] ? fixModi[mod].kg : 0;
+            const anteil = shareEl.checked ? baseKg / personen : baseKg;
+            if (lvEl) lvEl.innerText = Math.round(anteil) + ' kg';
+            fix += anteil;
+        }
+    });
+    fix = Math.round(fix);
+
+    const infra = 1000;
+    const gesamt = wohnen + alltagTotal + reisen + essen + digital + fix + infra;
+
+    // Result
+    document.getElementById('r-total').innerText = gesamt.toLocaleString('de-DE') + ' kg CO2';
+    const diff = gesamt - 10400;
+    document.getElementById('r-compare').innerText = diff > 0
+        ? `${diff.toLocaleString('de-DE')} kg über dem DE-Durchschnitt (10.400 kg)`
+        : `${Math.abs(diff).toLocaleString('de-DE')} kg unter dem DE-Durchschnitt (10.400 kg)`;
+
+    // Legende
+    document.getElementById('l-wohnen').innerText = wohnen;
+    document.getElementById('l-pendeln').innerText = alltagTotal;
+    document.getElementById('l-reisen').innerText = reisen;
+    document.getElementById('l-essen').innerText = essen;
+    document.getElementById('l-digital').innerText = digital;
+    document.getElementById('l-fix').innerText = fix;
+
+    // Balken
+    const bar = document.getElementById('r-bar');
+    const segs = [
+        [wohnen, 'wohnen'], [alltagTotal, 'pendeln'], [reisen, 'reisen'],
+        [essen, 'essen'], [digital, 'digital'], [fix, 'fix'], [infra, 'infra']
+    ];
+    bar.innerHTML = segs.map(([kg, key]) =>
+        `<div class="bar-seg" style="width:${(kg/gesamt*100).toFixed(1)}%;background:${COLORS[key]}" title="${key}: ${kg}kg"></div>`
+    ).join('');
+}
+
+// ─── PROFILE ────────────────────────────────────────────────────
+function getState() {
+    const state = {};
+    ['personen','strom-kwh','strom-kwh-n','strom-typ','heizung',
+     'arbeitstage','homeoffice','pendel-km','pendel-km-n','pendel-modus','carpool','sonst-km','sonst-km-n',
+     'ernaehrung','person-typ','streaming','streaming-n','ki','ki-n','email','email-n'
+    ].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        state[id] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    // Reisen
+    state.reisen = [];
+    document.querySelectorAll('[id^="r-"]').forEach(el => {
+        const id = el.id.replace('r-','');
+        const modEl = document.getElementById(`r-mod-${id}`);
+        const kmEl = document.getElementById(`r-km-${id}`);
+        if (modEl && kmEl) state.reisen.push({ mod: modEl.value, km: kmEl.value });
+    });
+    // Fixe
+    state.fixe = [];
+    document.querySelectorAll('[id^="f-"]').forEach(el => {
+        const id = el.id.replace('f-','');
+        const modEl = document.getElementById(`f-mod-${id}`);
+        const shareEl = document.getElementById(`f-share-${id}`);
+        if (modEl && shareEl) state.fixe.push({ mod: modEl.value, share: shareEl.checked });
+    });
+    return state;
+}
+
+function setState(state) {
+    ['personen','strom-kwh','strom-kwh-n','strom-typ','heizung',
+     'arbeitstage','homeoffice','pendel-km','pendel-km-n','pendel-modus','carpool','sonst-km','sonst-km-n',
+     'ernaehrung','person-typ','streaming','streaming-n','ki','ki-n','email','email-n'
+    ].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || state[id] === undefined) return;
+        if (el.type === 'checkbox') el.checked = state[id];
+        else el.value = state[id];
+    });
+    // Reisen zurücksetzen
+    document.getElementById('reise-list').innerHTML = '';
+    reiseCount = 0;
+    (state.reisen || []).forEach(r => {
+        const id = reiseCount++;
+        const opts = Object.entries(reiseModi).map(([k]) => `<option value="${k}" ${k===r.mod?'selected':''}>${k}</option>`).join('');
+        const div = document.createElement('div');
+        div.className = 'dyn-item'; div.id = `r-${id}`;
+        div.innerHTML = `<select id="r-mod-${id}" onchange="calc()">${opts}</select><input type="number" id="r-km-${id}" value="${r.km}" min="0" style="width:90px;" oninput="calc()"> km<button class="btn btn-remove" onclick="document.getElementById('r-${id}').remove();calc()"><i class="fas fa-trash-alt"></i></button>`;
+        document.getElementById('reise-list').appendChild(div);
+    });
+    // Fixe zurücksetzen
+    document.getElementById('fix-list').innerHTML = '';
+    fixCount = 0;
+    (state.fixe || []).forEach(f => {
+        const id = fixCount++;
+        const opts = Object.entries(fixModi).map(([k,v]) => `<option value="${k}" ${k===f.mod?'selected':''}>${k} (${v.info})</option>`).join('');
+        const div = document.createElement('div');
+        div.className = 'dyn-item'; div.id = `f-${id}`;
+        div.innerHTML = `<select id="f-mod-${id}" onchange="calc()">${opts}</select><label style="font-size:0.85em;white-space:nowrap;"><input type="checkbox" id="f-share-${id}" ${f.share?'checked':''} onchange="calc()"> geteilt</label><span class="lv" id="f-lv-${id}" style="min-width:60px;">0 kg</span><button class="btn btn-remove" onclick="document.getElementById('f-${id}').remove();calc()"><i class="fas fa-trash-alt"></i></button>`;
+        document.getElementById('fix-list').appendChild(div);
+    });
+    calc();
+}
+
+function saveProfile() {
+    const name = document.getElementById('profile-name').value.trim();
+    if (!name) { alert('Bitte einen Profilnamen eingeben.'); return; }
+    const profiles = JSON.parse(localStorage.getItem('co2profiles') || '{}');
+    profiles[name] = getState();
+    localStorage.setItem('co2profiles', JSON.stringify(profiles));
+    renderChips();
+}
+
+function loadProfile(name) {
+    const profiles = JSON.parse(localStorage.getItem('co2profiles') || '{}');
+    if (profiles[name]) { setState(profiles[name]); document.getElementById('profile-name').value = name; }
+}
+
+function deleteProfile(name) {
+    if (!confirm(`Profil "${name}" löschen?`)) return;
+    const profiles = JSON.parse(localStorage.getItem('co2profiles') || '{}');
+    delete profiles[name];
+    localStorage.setItem('co2profiles', JSON.stringify(profiles));
+    renderChips();
+}
+
+function renderChips() {
+    const profiles = JSON.parse(localStorage.getItem('co2profiles') || '{}');
+    const container = document.getElementById('profile-chips');
+    container.innerHTML = Object.keys(profiles).map(name => `
+        <span class="profile-chip" onclick="loadProfile('${name}')">${name}</span>
+        <button class="btn btn-danger" style="padding:4px 8px;font-size:0.78em;" onclick="deleteProfile('${name}')"><i class="fas fa-times"></i></button>
+    `).join('');
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────
+function exportPNG() {
+    html2canvas(document.getElementById('result-card'), { scale: 2, backgroundColor: null }).then(canvas => {
+        const a = document.createElement('a');
+        a.download = 'co2-ergebnis.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+    });
+}
+
+function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    html2canvas(document.querySelector('.app'), { scale: 1.5 }).then(canvas => {
+        const img = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const w = pdf.internal.pageSize.getWidth();
+        const h = (canvas.height / canvas.width) * w;
+        pdf.addImage(img, 'PNG', 0, 0, w, h);
+        pdf.save('co2-fussabdruck.pdf');
+    });
+}
+
+function sharePage() {
+    if (navigator.share) {
+        navigator.share({ title: 'Mein CO2-Fußabdruck', text: 'Berechne deinen persönlichen CO2-Fußabdruck!', url: window.location.href });
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link in die Zwischenablage kopiert!');
+    }
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+document.querySelectorAll('input:not([type=checkbox]), select').forEach(el => {
+    el.addEventListener('input', calc);
+    el.addEventListener('change', calc);
+});
+document.querySelectorAll('input[type=checkbox]').forEach(el => el.addEventListener('change', calc));
+
+addReise();
+addFix();
+addFix();
+renderChips();
+calc();
+</script>
+</body>
+</html>
