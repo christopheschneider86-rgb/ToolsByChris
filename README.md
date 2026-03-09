@@ -1,6 +1,6 @@
 # 🏆 Mathe-Hüpfer (PWA)
 
-<img src="mathe_jump.png" width="300" hight="300">
+<img src="mathe_hüpfer/mathe_jump.png" width="300" hight="300">
 
 > **Ein interaktives Mathe-Lernspiel für Grundschulkinder (3. & 4. Klasse)**  
 > 🔗 **[Hier Mathe-Hüpfer spielen](https://christopheschneider86-rgb.github.io/ToolsByChris/mathe_hüpfer/)**
