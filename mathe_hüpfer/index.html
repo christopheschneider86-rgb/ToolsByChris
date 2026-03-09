@@ -22,7 +22,7 @@
             background: #2c3e50;
             display: flex; justify-content: center; align-items: center;
             min-height: 100vh;
-            font-family: 'Comic Sans MS', cursive;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', 'Comic Neue', sans-serif;
             touch-action: none; overflow: hidden;
         }
         #app {
@@ -566,11 +566,11 @@ function draw(){
             ctx.stroke();
             
             // Textfarbe bleibt dunkel für guten Kontrast
-            ctx.fillStyle='#2c3e50'; ctx.font='bold 15px Comic Sans MS'; ctx.textAlign='center';
+            ctx.fillStyle='#2c3e50'; ctx.font="bold 15px 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif"; ctx.textAlign='center';
             ctx.fillText(p.eq, p.x+PW/2, p.y+19);
             // Ergebnis in der entsprechenden Rand-Farbe oder dunkelrot
             ctx.fillStyle= p.color ? p.color.stroke : '#c0392b'; 
-            ctx.font='bold 19px Comic Sans MS';
+            ctx.font="bold 19px 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif";
             ctx.fillText('= '+p.ans, p.x+PW/2, p.y+41);
         }
         drawGadgetIcon(p);
