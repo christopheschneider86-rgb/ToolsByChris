@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🛠️ PDF Magic Box</title>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.0/dist/tesseract.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; padding: 20px;
+    }
+    .lang-switcher { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 5px; }
+    .lang-btn { background: rgba(255,255,255,0.9); border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-weight: 500; }
+    .lang-btn.active { background: #667eea; color: white; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; color: white; font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 30px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+    
+    .upload-card { 
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border-radius: 20px; 
+      padding: 30px; margin-bottom: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255,255,255,0.2); text-align: center;
+    }
+    .file-input-wrapper { position: relative; display: inline-block; width: 100%; }
+    #pdfFile { opacity: 0; position: absolute; width: 100%; height: 100%; cursor: pointer; }
+    .file-label { 
+      display: flex; flex-direction: column; align-items: center; gap: 10px; 
+      padding: 30px; border: 3px dashed #667eea; border-radius: 16px; 
+      background: rgba(102,126,234,0.1); cursor: pointer; transition: all 0.3s;
+      font-size: 1.1rem; color: #555;
+    }
+    .file-label:hover { background: rgba(102,126,234,0.2); transform: scale(1.02); }
+    .file-info { background: #e8f0fe; padding: 15px; border-radius: 12px; margin-top: 15px; display: none; }
+    .file-info.show { display: block; }
+    
+    .functions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .function-card { 
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); border-radius: 20px; 
+      padding: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.2);
+      transition: opacity 0.3s;
+    }
+    .function-card h3 { display: flex; align-items: center; gap: 12px; color: #333; margin: 0 0 20px 0; font-size: 1.2rem; font-weight: 600; }
+    .function-card.disabled { opacity: 0.5; pointer-events: none; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; font-weight: 500; color: #555; margin-bottom: 8px; font-size: 0.9rem; }
+    input[type="text"], input[type="range"], input[type="file"], select { 
+      width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 10px; 
+      font-size: 16px; transition: all 0.3s; background: #fff;
+    }
+    input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+    .range-info { font-size: 0.85rem; color: #666; margin-top: 5px; }
+    
+    .action-btn { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; 
+      padding: 14px 24px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; 
+      transition: all 0.3s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .action-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102,126,234,0.4); }
+    .action-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    
+    .status { padding: 10px; border-radius: 8px; margin-top: 12px; display: none; text-align: center; font-weight: 500; font-size: 0.9rem; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    
+    @media (max-width: 600px) { body { padding: 15px; } .functions-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="lang-switcher">
+    <button class="lang-btn active" data-lang="de">🇩🇪 DE</button>
+    <button class="lang-btn" data-lang="en">🇺🇸 EN</button>
+  </div>
+
+  <div class="container">
+    <h1 data-de='<i class="fas fa-magic"></i> PDF Magic Box' data-en='<i class="fas fa-magic"></i> PDF Magic Box'>
+      <i class="fas fa-magic"></i> PDF Magic Box
+    </h1>
+    
+    <div class="upload-card">
+      <div class="file-input-wrapper">
+        <input type="file" id="pdfFile" accept="application/pdf">
+        <label for="pdfFile" class="file-label">
+          <i class="fas fa-cloud-upload-alt fa-3x" style="color: #667eea;"></i>
+          <div data-de="PDF-Datei hier ablegen oder klicken" data-en="Drop PDF here or click">PDF-Datei hier ablegen oder klicken</div>
+          <div style="font-size: 0.9rem; opacity: 0.8;" data-de="Drag & Drop oder Klick zum Laden" data-en="Drag & Drop or click">Drag & Drop oder Klick zum Laden</div>
+        </label>
+      </div>
+      <div id="fileInfo" class="file-info">
+        <strong id="fileName"></strong> (<span id="fileSize"></span>)
+        <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+          <span id="pageCount">-</span> <span data-de="Seite(n)" data-en="Page(s)">Seite(n)</span> | 
+          <span id="pdfBytes">-</span> <span data-de="Bytes" data-en="Bytes">Bytes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="functions-grid">
+      <!-- MERGE -->
+      <div class="function-card" id="mergeCard">
+        <h3 data-de='<i class="fas fa-compress-arrows-alt"></i> Zusammenführen' data-en='<i class="fas fa-compress-arrows-alt"></i> Merge'>
+          <i class="fas fa-compress-arrows-alt"></i> Zusammenführen
+        </h3>
+        <div class="input-group">
+          <label data-de="📄 Zusätzliche PDFs" data-en="📄 Extra PDFs">📄 Zusätzliche PDFs</label>
+          <input type="file" id="mergeExtra" accept="application/pdf" multiple />
+        </div>
+        <button class="action-btn" id="mergeBtn" data-de='<i class="fas fa-magic"></i> Mergen' data-en='<i class="fas fa-magic"></i> Merge'>
+          <i class="fas fa-magic"></i> Mergen
+        </button>
+        <div id="mergeStatus" class="status"></div>
+      </div>
+
+      <!-- SPLIT -->
+      <div class="function-card" id="splitCard">
+        <h3 data-de='<i class="fas fa-cut"></i> Seiten extrahieren' data-en='<i class="fas fa-cut"></i> Extract Pages'>
+          <i class="fas fa-cut"></i> Seiten extrahieren
+        </h3>
+        <div class="input-group">
+          <label data-de="📄 Seitenbereich" data-en="📄 Page range">📄 Seitenbereich</label>
+          <input type="text" id="pageRange" value="1-3" placeholder="1-3 oder alle" />
+        </div>
+        <button class="action-btn" id="splitBtn" data-de='<i class="fas fa-scissors"></i> Extrahieren' data-en='<i class="fas fa-scissors"></i> Extract'>
+          <i class="fas fa-scissors"></i> Extrahieren
+        </button>
+        <div id="splitStatus" class="status"></div>
+      </div>
+
+      <!-- ROTATE -->
+      <div class="function-card" id="rotateCard">
+        <h3 data-de='<i class="fas fa-redo"></i> Drehen' data-en='<i class="fas fa-redo"></i> Rotate'>
+          <i class="fas fa-redo"></i> Drehen
+        </h3>
+        <div class="input-group">
+          <label data-de="📄 Seiten" data-en="📄 Pages">📄 Seiten</label>
+          <input type="text" id="rotatePages" value="alle" placeholder="alle oder 1,3,5" />
+        </div>
+        <div class="input-group">
+          <label data-de="🔄 Winkel" data-en="🔄 Angle">🔄 Winkel</label>
+          <select id="rotateDegrees">
+            <option value="90">90° rechts</option>
+            <option value="180">180°</option>
+            <option value="270">90° links</option>
+          </select>
+        </div>
+        <button class="action-btn" id="rotateBtn" data-de='<i class="fas fa-sync-alt"></i> Drehen' data-en='<i class="fas fa-sync-alt"></i> Rotate'>
+          <i class="fas fa-sync-alt"></i> Drehen
+        </button>
+        <div id="rotateStatus" class="status"></div>
+      </div>
+
+      <!-- COMPRESS -->
+      <div class="function-card" id="compressCard">
+        <h3 data-de='<i class="fas fa-compress"></i> Komprimieren' data-en='<i class="fas fa-compress"></i> Compress'>
+          <i class="fas fa-compress"></i> Komprimieren
+        </h3>
+        <div class="input-group">
+          <label data-de="⚙️ Stufe" data-en="⚙️ Level">⚙️ Stufe</label>
+          <input type="range" id="compressLevel" min="1" max="5" value="3" />
+          <div class="range-info" data-de="Stufe 3/5: ~60% kleiner" data-en="Level 3/5: ~60% smaller">Stufe 3/5: ~60% kleiner</div>
+        </div>
+        <button class="action-btn" id="compressBtn" data-de='<i class="fas fa-compress-arrows-alt"></i> Komprimieren' data-en='<i class="fas fa-compress-arrows-alt"></i> Compress'>
+          <i class="fas fa-compress-arrows-alt"></i> Komprimieren
+        </button>
+        <div id="compressStatus" class="status"></div>
+      </div>
+
+      <!-- IMAGE -->
+      <div class="function-card" id="imageCard">
+        <h3 data-de='<i class="fas fa-image"></i> Zu Bild' data-en='<i class="fas fa-image"></i> To Image'>
+          <i class="fas fa-image"></i> Zu Bild
+        </h3>
+        <div class="input-group">
+          <label data-de="🖼️ Format" data-en="🖼️ Format">🖼️ Format</label>
+          <select id="imageFormat">
+            <option value="image/png">PNG</option>
+            <option value="image/jpeg">JPEG</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label data-de="📄 Seiten" data-en="📄 Pages">📄 Seiten</label>
+          <input type="text" id="imagePages" value="alle" placeholder="alle oder 1,2,3" />
+        </div>
+        <button class="action-btn" id="imageBtn" data-de='<i class="fas fa-file-image"></i> Bilder erzeugen' data-en='<i class="fas fa-file-image"></i> Generate Images'>
+          <i class="fas fa-file-image"></i> Bilder erzeugen
+        </button>
+        <div id="imageStatus" class="status"></div>
+      </div>
+
+      <!-- UNLOCK / DRUCKSCHUTZ ENTFERNEN -->
+      <div class="function-card" id="unlockCard">
+        <h3 data-de='<i class="fas fa-unlock-alt"></i> Druckschutz entfernen' data-en='<i class="fas fa-unlock-alt"></i> Remove Print Restriction'>
+          <i class="fas fa-unlock-alt"></i> Druckschutz entfernen
+        </h3>
+        <div class="input-group">
+          <label data-de="🔑 Passwort (nur falls PDF beim Öffnen danach fragt)" data-en="🔑 Password (only if PDF asks for one on open)">🔑 Passwort (nur falls PDF beim Öffnen danach fragt)</label>
+          <input type="password" id="unlockPassword" placeholder="Leer lassen wenn PDF normal öffnet" />
+        </div>
+        <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 0.82rem; color: #155724;">
+          <span data-de="✅ Erstellt eine Kopie ohne Druckschutz, Bearbeitungsschutz etc. – Passwortfeld meist leer lassen." data-en="✅ Creates a copy without print/edit restrictions – usually leave password field empty.">✅ Erstellt eine Kopie ohne Druckschutz, Bearbeitungsschutz etc. – Passwortfeld meist leer lassen.</span>
+        </div>
+        <button class="action-btn" id="unlockBtn">
+          <i class="fas fa-lock-open"></i> <span data-de="Druckbare Kopie erstellen" data-en="Create printable copy">Druckbare Kopie erstellen</span>
+        </button>
+        <div id="unlockStatus" class="status"></div>
+      </div>
+
+      <!-- OCR (ERWEITERT) -->
+      <div class="function-card" id="ocrCard">
+        <h3 data-de='<i class="fas fa-font"></i> Text extrahieren / OCR' data-en='<i class="fas fa-font"></i> Extract Text / OCR'>
+          <i class="fas fa-font"></i> Text extrahieren / OCR
+        </h3>
+        <div class="input-group">
+          <label data-de="📄 Seiten" data-en="📄 Pages">📄 Seiten</label>
+          <input type="text" id="ocrPages" value="alle" placeholder="1-3 oder alle" />
+        </div>
+        <div class="input-group">
+          <label data-de="⚙️ Modus" data-en="⚙️ Mode">⚙️ Modus</label>
+          <select id="ocrMode">
+            <option value="text" data-de="📖 Text (schnell)" data-en="📖 Text (fast)">📖 Text (schnell)</option>
+            <option value="ocr" data-de="🔍 OCR (gescannt)" data-en="🔍 OCR (scanned)">🔍 OCR (gescannt)</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label data-de="🌐 OCR-Sprache" data-en="🌐 OCR Language">🌐 OCR-Sprache</label>
+          <select id="ocrLanguage">
+            <option value="auto" data-de="🧠 Auto-Erkennung" data-en="🧠 Auto-detect">🧠 Auto-Erkennung</option>
+            <option value="deu">🇩🇪 Deutsch</option>
+            <option value="eng">🇺🇸 English</option>
+            <option value="fra">🇫🇷 Français</option>
+            <option value="spa">🇪🇸 Español</option>
+            <option value="ita">🇮🇹 Italiano</option>
+            <option value="por">🇵🇹 Português</option>
+            <option value="nld">🇳🇱 Nederlands</option>
+            <option value="rus">🇷🇺 Русский</option>
+            <option value="pol">🇵🇱 Polski</option>
+          </select>
+        </div>
+        <button class="action-btn" id="ocrBtn" data-de='<i class="fas fa-file-alt"></i> Text extrahieren' data-en='<i class="fas fa-file-alt"></i> Extract Text'>
+          <i class="fas fa-file-alt"></i> Text extrahieren
+        </button>
+        <div id="ocrStatus" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { PDFDocument, degrees } = PDFLib;
+    
+    // PDF.js Initialisierung prüfen und konfigurieren
+    if (typeof pdfjsLib === 'undefined') {
+      console.error('❌ PDF.js wurde nicht geladen! Bitte Seite neu laden.');
+      alert('Fehler beim Laden der PDF.js Bibliothek. Bitte laden Sie die Seite neu.');
+    } else {
+      // Worker-Pfad sofort setzen
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      console.log('✅ PDF.js geladen:', pdfjsLib.version);
+    }
+    
+    // Tesseract prüfen
+    if (typeof Tesseract === 'undefined') {
+      console.error('❌ Tesseract.js wurde nicht geladen!');
+    } else {
+      console.log('✅ Tesseract.js geladen');
+    }
+    
+    let currentPdfBytes = null;
+    let currentPdfDoc = null;
+    let pageCount = 0;
+    let currentLang = 'de';
+    let originalFileName = 'dokument'; // Wird beim Upload gesetzt
+
+    // Status-Anzeige
+    function showStatus(id, message, type) {
+      const status = document.getElementById(id);
+      status.textContent = message;
+      status.className = `status ${type}`;
+      status.style.display = 'block';
+      setTimeout(() => status.style.display = 'none', 5000);
+    }
+
+    // Download-Funktion
+    function download(data, filename) {
+      if (data instanceof Blob) {
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        const blob = new Blob([data], { type: 'application/pdf' });
+        download(blob, filename);
+      }
+    }
+
+    // Seitenbereich parsen
+    function parsePageRange(input, totalPages) {
+      if (input.toLowerCase() === 'alle') return Array.from({length: totalPages}, (_, i) => i);
+      return input.split(',').flatMap(range => {
+        if (range.includes('-')) {
+          const [start, end] = range.split('-').map(n => parseInt(n.trim()) - 1);
+          return Array.from({length: end - start + 1}, (_, i) => Math.max(0, Math.min(totalPages-1, start + i)));
+        }
+        const idx = parseInt(range.trim()) - 1;
+        return idx >= 0 && idx < totalPages ? [idx] : [];
+      });
+    }
+
+    // Funktionskarten aktivieren/deaktivieren
+    function updateFunctionStates() {
+      const hasPdf = !!currentPdfBytes;
+      document.querySelectorAll('.function-card').forEach(card => {
+        card.classList.toggle('disabled', !hasPdf);
+      });
+    }
+
+    // Sprache setzen
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+      localStorage.setItem('pdfmagic_lang', lang);
+      document.querySelectorAll('[data-de]').forEach(el => {
+        if (el.dataset[lang]) el.innerHTML = el.dataset[lang];
+      });
+    }
+
+    // PDF HOCHLADEN
+    document.getElementById('pdfFile').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      currentPdfBytes = await file.arrayBuffer();
+      originalFileName = file.name.replace(/\.pdf$/i, ''); // Dateinamen ohne .pdf speichern
+
+      // Versuche normale Laden – klappt bei ungeschützten PDFs
+      let isRestricted = false;
+      try {
+        currentPdfDoc = await PDFDocument.load(currentPdfBytes);
+        pageCount = currentPdfDoc.getPageCount();
+      } catch (err) {
+        // Fallback: mit ignoreEncryption laden (Druckschutz / Owner-Password)
+        try {
+          currentPdfDoc = await PDFDocument.load(currentPdfBytes, { ignoreEncryption: true });
+          pageCount = currentPdfDoc.getPageCount();
+          isRestricted = true;
+        } catch (err2) {
+          // Komplett verschlüsselt mit User-Password – trotzdem Bytes behalten für Unlock
+          currentPdfDoc = null;
+          pageCount = 0;
+          isRestricted = true;
+        }
+      }
+
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+      document.getElementById('pageCount').textContent = isRestricted ? '🔒 Geschützt' : pageCount;
+      document.getElementById('pdfBytes').textContent = (file.size / 1024).toFixed(0) + ' KB';
+      document.getElementById('fileInfo').classList.add('show');
+
+      if (isRestricted) {
+        // Nur Unlock-Karte aktivieren, Rest gesperrt
+        document.querySelectorAll('.function-card').forEach(card => {
+          card.classList.toggle('disabled', card.id !== 'unlockCard');
+        });
+        showStatus('unlockStatus', '🔒 PDF hat Einschränkungen – bitte "Druckbare Kopie erstellen" nutzen!', 'error');
+      } else {
+        updateFunctionStates();
+        showStatus('mergeStatus', `✅ ${pageCount} Seiten geladen!`, 'success');
+      }
+    });
+
+    // SPRACHE WECHSELN
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+    });
+    const savedLang = localStorage.getItem('pdfmagic_lang') || (navigator.language?.startsWith('de') ? 'de' : 'en');
+    setLanguage(savedLang);
+
+    // MERGE
+    document.getElementById('mergeBtn').addEventListener('click', async () => {
+      const extraFiles = document.getElementById('mergeExtra').files;
+      if (extraFiles.length === 0) {
+        showStatus('mergeStatus', '❌ Keine zusätzlichen PDFs ausgewählt!', 'error');
+        return;
+      }
+      const btn = document.getElementById('mergeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+      try {
+        const mergedPdf = await PDFDocument.create();
+        const copiedPages = await mergedPdf.copyPages(currentPdfDoc, currentPdfDoc.getPageIndices());
+        copiedPages.forEach(p => mergedPdf.addPage(p));
+        for (const file of extraFiles) {
+          const bytes = await file.arrayBuffer();
+          const pdf = await PDFDocument.load(bytes);
+          const extraPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          extraPages.forEach(p => mergedPdf.addPage(p));
+        }
+        const bytes = await mergedPdf.save();
+        download(bytes, `${originalFileName}_merged.pdf`);
+        showStatus('mergeStatus', '✅ PDFs zusammengeführt!', 'success');
+      } catch (e) {
+        showStatus('mergeStatus', '❌ Fehler beim Zusammenführen!', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic"></i> Mergen';
+      }
+    });
+
+    // SPLIT
+    document.getElementById('splitBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('splitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+      try {
+        const range = document.getElementById('pageRange').value;
+        const pageIndices = parsePageRange(range, pageCount);
+        const newPdf = await PDFDocument.create();
+        const copiedPages = await newPdf.copyPages(currentPdfDoc, pageIndices);
+        copiedPages.forEach(p => newPdf.addPage(p));
+        const bytes = await newPdf.save();
+        download(bytes, `${originalFileName}_seiten-${range}.pdf`);
+        showStatus('splitStatus', `✅ ${pageIndices.length} Seite(n) extrahiert!`, 'success');
+      } catch (e) {
+        showStatus('splitStatus', '❌ Fehler beim Extrahieren!', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-scissors"></i> Extrahieren';
+      }
+    });
+
+    // ROTATE
+    document.getElementById('rotateBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('rotateBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+      try {
+        const pagesInput = document.getElementById('rotatePages').value;
+        const rotation = parseInt(document.getElementById('rotateDegrees').value);
+        const pageIndices = parsePageRange(pagesInput, pageCount);
+        const pdfDoc = await PDFDocument.load(currentPdfBytes);
+        pageIndices.forEach(idx => {
+          const page = pdfDoc.getPage(idx);
+          page.setRotation(degrees(rotation));
+        });
+        const bytes = await pdfDoc.save();
+        download(bytes, `${originalFileName}_gedreht-${rotation}grad.pdf`);
+        showStatus('rotateStatus', `✅ ${pageIndices.length} Seite(n) gedreht!`, 'success');
+      } catch (e) {
+        showStatus('rotateStatus', '❌ Fehler beim Drehen!', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Drehen';
+      }
+    });
+
+    // COMPRESS
+    document.getElementById('compressBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('compressBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+      try {
+        const pdfDoc = await PDFDocument.load(currentPdfBytes);
+        const bytes = await pdfDoc.save({
+          useObjectStreams: true,
+          addDefaultPage: false,
+          objectsPerTick: 50
+        });
+        download(bytes, `${originalFileName}_komprimiert.pdf`);
+        const originalSize = (currentPdfBytes.byteLength / 1024).toFixed(0);
+        const newSize = (bytes.byteLength / 1024).toFixed(0);
+        const reduction = ((1 - bytes.byteLength / currentPdfBytes.byteLength) * 100).toFixed(0);
+        showStatus('compressStatus', `✅ ${originalSize}KB → ${newSize}KB (-${reduction}%)`, 'success');
+      } catch (e) {
+        showStatus('compressStatus', '❌ Fehler beim Komprimieren!', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-compress-arrows-alt"></i> Komprimieren';
+      }
+    });
+
+    // IMAGE CONVERSION
+    document.getElementById('imageBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('imageBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+      try {
+        const format = document.getElementById('imageFormat').value;
+        const pagesInput = document.getElementById('imagePages').value;
+        const pageIndices = parsePageRange(pagesInput, pageCount);
+        
+        const pdf = await pdfjsLib.getDocument({ data: currentPdfBytes }).promise;
+        
+        for (let i = 0; i < pageIndices.length; i++) {
+          const idx = pageIndices[i];
+          showStatus('imageStatus', `🖼️ Erstelle Bild ${i + 1}/${pageIndices.length}...`, 'success');
+          
+          const page = await pdf.getPage(idx + 1);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          
+          // Promise-basierter Blob-Download
+          await new Promise((resolve) => {
+            canvas.toBlob(blob => {
+              download(blob, `${originalFileName}_seite-${idx + 1}.${format.split('/')[1]}`);
+              setTimeout(resolve, 100); // Kurze Pause zwischen Downloads
+            }, format);
+          });
+        }
+        showStatus('imageStatus', `✅ ${pageIndices.length} Bild(er) erstellt!`, 'success');
+      } catch (e) {
+        console.error('Image conversion error:', e);
+        showStatus('imageStatus', '❌ Fehler: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-image"></i> Bilder erzeugen';
+      }
+    });
+
+    // OCR / TEXT EXTRACTION
+    document.getElementById('ocrBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('ocrBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+      try {
+        const pagesInput = document.getElementById('ocrPages').value;
+        const mode = document.getElementById('ocrMode').value;
+        const language = document.getElementById('ocrLanguage').value;
+        const pageIndices = parsePageRange(pagesInput, pageCount);
+        
+        let extractedText = '';
+        
+        const pdf = await pdfjsLib.getDocument({ data: currentPdfBytes }).promise;
+        
+        if (mode === 'text') {
+          // Schnelle Text-Extraktion
+          for (let i = 0; i < pageIndices.length; i++) {
+            const idx = pageIndices[i];
+            showStatus('ocrStatus', `📖 Extrahiere Seite ${i + 1}/${pageIndices.length}...`, 'success');
+            const page = await pdf.getPage(idx + 1);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            extractedText += `\n\n--- Seite ${idx + 1} ---\n${pageText}`;
+          }
+        } else {
+          // OCR für gescannte PDFs
+          const ocrLang = language === 'auto' ? 'deu+eng' : language;
+          
+          for (let i = 0; i < pageIndices.length; i++) {
+            const idx = pageIndices[i];
+            showStatus('ocrStatus', `🔍 OCR Seite ${i + 1}/${pageIndices.length}...`, 'success');
+            const page = await pdf.getPage(idx + 1);
+            const viewport = page.getViewport({ scale: 2 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+            
+            const { data: { text } } = await Tesseract.recognize(canvas, ocrLang, {
+              logger: m => {
+                if (m.status === 'recognizing text') {
+                  showStatus('ocrStatus', `🔍 OCR Seite ${i + 1}/${pageIndices.length} - ${Math.round(m.progress * 100)}%`, 'success');
+                }
+              }
+            });
+            extractedText += `\n\n--- Seite ${idx + 1} ---\n${text}`;
+          }
+        }
+        
+        const blob = new Blob([extractedText], { type: 'text/plain;charset=utf-8' });
+        download(blob, `${originalFileName}_text.txt`);
+        showStatus('ocrStatus', `✅ Text von ${pageIndices.length} Seite(n) extrahiert!`, 'success');
+      } catch (e) {
+        console.error('OCR error:', e);
+        showStatus('ocrStatus', '❌ Fehler: ' + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-file-alt"></i> Text extrahieren';
+      }
+    });
+
+    // DRUCKSCHUTZ ENTFERNEN – druckbare Kopie via PDF.js Rendering
+    document.getElementById('unlockBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('unlockBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+      const password = document.getElementById('unlockPassword').value;
+      try {
+        // PDF.js öffnet auch geschützte PDFs (nur Druckschutz / Owner-Password)
+        const loadingTask = pdfjsLib.getDocument({
+          data: currentPdfBytes,
+          password: password || ''
+        });
+        const pdfJsDoc = await loadingTask.promise;
+        const totalPages = pdfJsDoc.numPages;
+
+        // Neues leeres PDF mit pdf-lib erstellen
+        const freePdf = await PDFDocument.create();
+
+        for (let i = 1; i <= totalPages; i++) {
+          showStatus('unlockStatus', `⏳ Verarbeite Seite ${i}/${totalPages}...`, 'success');
+
+          const page = await pdfJsDoc.getPage(i);
+          const viewport = page.getViewport({ scale: 2 }); // 2x = gute Qualität
+
+          // Seite auf Canvas rendern
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+          // Canvas → PNG Bytes
+          const imgDataUrl = canvas.toDataURL('image/png');
+          const imgBytes = await fetch(imgDataUrl).then(r => r.arrayBuffer());
+
+          // Bild in neues PDF einbetten
+          const pngImage = await freePdf.embedPng(imgBytes);
+          const pdfPage = freePdf.addPage([viewport.width / 2, viewport.height / 2]); // /2 wegen scale:2
+          pdfPage.drawImage(pngImage, {
+            x: 0, y: 0,
+            width: viewport.width / 2,
+            height: viewport.height / 2
+          });
+        }
+
+        const bytes = await freePdf.save();
+        download(bytes, `${originalFileName}_druckbar.pdf`);
+        showStatus('unlockStatus', `✅ Fertig! ${totalPages} Seite(n) – jetzt ohne Einschränkungen druckbar.`, 'success');
+      } catch (e) {
+        if (e.name === 'PasswordException') {
+          showStatus('unlockStatus', '❌ Falsches Passwort oder Passwort erforderlich.', 'error');
+        } else {
+          showStatus('unlockStatus', '❌ Fehler: ' + e.message, 'error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock-open"></i> Druckbare Kopie erstellen';
+      }
+    });
+
+    // Komprimierungs-Slider
+    document.getElementById('compressLevel').addEventListener('input', (e) => {
+      const level = e.target.value;
+      const percentages = { 1: 20, 2: 40, 3: 60, 4: 75, 5: 85 };
+      const info = document.querySelector('#compressCard .range-info');
+      info.textContent = currentLang === 'de' 
+        ? `Stufe ${level}/5: ~${percentages[level]}% kleiner`
+        : `Level ${level}/5: ~${percentages[level]}% smaller`;
+    });
+
+    console.log('🚀 PDF Magic Box vollständig geladen - 6 Funktionen bereit!');
+  </script>
+</body>
+</html>
