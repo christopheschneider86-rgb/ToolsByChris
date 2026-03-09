@@ -363,6 +363,16 @@ let player={x:200,y:300,r:12,vy:0,state:'normal',timer:0};
 let targetX=200, platforms=[];
 const PW=90, PH=50; // Platform Width/Height
 
+// Farbpalette für bunte Plattformen
+const COLORS = [
+    { fill: '#ffb8b8', stroke: '#e84118' }, // Pastellrot / Dunkelrot
+    { fill: '#c7ecee', stroke: '#0984e3' }, // Pastellblau / Dunkelblau
+    { fill: '#badc58', stroke: '#6ab04c' }, // Pastellgrün / Dunkelgrün
+    { fill: '#f8c291', stroke: '#e55039' }, // Pastellorange / Orange
+    { fill: '#e056fd', stroke: '#be2edd' }, // Pastelllila / Dunkellila
+    { fill: '#f6e58d', stroke: '#f0932b' }  // Pastellgelb / Senfgelb
+];
+
 const GADGETS=[
     {id:'rocket',emoji:'🚀',chance:0.06},
     {id:'spring',emoji:'🌀',chance:0.12},
@@ -392,8 +402,12 @@ function createFloor(y){
         const p=genProblem();
         const opts=[p.ans,p.w].sort(()=>Math.random()-0.5);
         const x1=rnd(10,110), x2=rnd(200,300);
-        platforms.push({x:x1,y,type:'math',correct:opts[0]===p.ans,eq:p.eq,ans:opts[0],broken:false,item:pickGadget()});
-        platforms.push({x:x2,y,type:'math',correct:opts[1]===p.ans,eq:p.eq,ans:opts[1],broken:false,item:pickGadget()});
+        
+        // Zufällige Farbe für diese Ebene wählen (beide Plattformen bekommen die gleiche Farbe)
+        const colorStyle = COLORS[Math.floor(Math.random() * COLORS.length)];
+        
+        platforms.push({x:x1,y,type:'math',correct:opts[0]===p.ans,eq:p.eq,ans:opts[0],broken:false,item:pickGadget(), color: colorStyle});
+        platforms.push({x:x2,y,type:'math',correct:opts[1]===p.ans,eq:p.eq,ans:opts[1],broken:false,item:pickGadget(), color: colorStyle});
     }
 }
 
@@ -536,14 +550,21 @@ function draw(){
             ctx.arc(p.x+75,p.y+20,18,0,Math.PI*2);
             ctx.fill();
         } else {
-            ctx.fillStyle='#f8c291';
+            // Nutze die Farbe aus dem Plattform-Objekt
+            ctx.fillStyle = p.color ? p.color.fill : '#f8c291';
             ctx.beginPath();
             if(ctx.roundRect)ctx.roundRect(p.x,p.y,PW,PH,8); else ctx.rect(p.x,p.y,PW,PH);
             ctx.fill();
-            ctx.lineWidth=3; ctx.strokeStyle='#e55039'; ctx.stroke();
+            ctx.lineWidth=3; 
+            ctx.strokeStyle = p.color ? p.color.stroke : '#e55039'; 
+            ctx.stroke();
+            
+            // Textfarbe bleibt dunkel für guten Kontrast
             ctx.fillStyle='#2c3e50'; ctx.font='bold 15px Comic Sans MS'; ctx.textAlign='center';
             ctx.fillText(p.eq, p.x+PW/2, p.y+19);
-            ctx.fillStyle='#c0392b'; ctx.font='bold 19px Comic Sans MS';
+            // Ergebnis in der entsprechenden Rand-Farbe oder dunkelrot
+            ctx.fillStyle= p.color ? p.color.stroke : '#c0392b'; 
+            ctx.font='bold 19px Comic Sans MS';
             ctx.fillText('= '+p.ans, p.x+PW/2, p.y+41);
         }
         drawGadgetIcon(p);
