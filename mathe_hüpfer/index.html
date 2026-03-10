@@ -7,15 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Mathe-Hüpfer">
-    
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="mathe_jump.png">
-    
-    <!-- HIER IST DAS NEUE FAVICON -->
     <link rel="icon" type="image/png" href="mathe_jump.png">
-    
     <title>Mathe-Hüpfer</title>
-    <!-- ... danach kommt dein <style>-Block ... -->
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -82,6 +77,11 @@
         }
         .btn-diff.active { background: rgba(255,255,255,0.25); border-color: #f1c40f; font-weight: bold; }
 
+        /* ── Slider für Einstellungen ── */
+        .slider-container { width: 100%; margin-bottom: 25px; text-align: left; }
+        .slider-container label { font-size: 18px; font-weight: bold; color: #f1c40f; }
+        input[type=range] { width: 100%; margin-top: 10px; accent-color: #f1c40f; height: 8px; }
+
         /* ── HUD im Spiel ── */
         #hud {
             position: absolute; top: 0; left: 0; right: 0;
@@ -106,14 +106,8 @@
         }
 
         /* ── Mainpage Highscore ── */
-        .hs-table {
-            width: 100%; border-collapse: collapse;
-            font-size: 16px; margin: 5px 0 16px 0;
-        }
-        .hs-table th {
-            background: rgba(241,196,15,0.2);
-            color: #f1c40f; padding: 7px; border-bottom: 2px solid #f1c40f;
-        }
+        .hs-table { width: 100%; border-collapse: collapse; font-size: 16px; margin: 5px 0 16px 0; }
+        .hs-table th { background: rgba(241,196,15,0.2); color: #f1c40f; padding: 7px; border-bottom: 2px solid #f1c40f; }
         .hs-table td { padding: 7px 5px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .hs-table tr:nth-child(even) td { background: rgba(255,255,255,0.04); }
         .hs-rank { color: #f1c40f; font-weight: bold; font-size: 18px; }
@@ -121,16 +115,11 @@
 
         /* ── Anleitung ── */
         .rule-box {
-            background: rgba(255,255,255,0.08);
-            border-radius: 10px; padding: 10px 14px;
-            margin: 6px 0; font-size: 14px; line-height: 1.75;
-            text-align: left; width: 100%;
+            background: rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px;
+            margin: 6px 0; font-size: 14px; line-height: 1.75; text-align: left; width: 100%;
         }
         .rule-box b { color: #f1c40f; }
-        .gadget-grid {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 3px 10px; font-size: 13px; margin-top: 5px;
-        }
+        .gadget-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 13px; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -152,18 +141,13 @@
         </div>
 
         <table class="hs-table">
-            <thead>
-                <tr>
-                    <th>Modus</th>
-                    <th>Highscore</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Modus</th><th>Highscore</th></tr></thead>
             <tbody id="hsBody"></tbody>
         </table>
 
         <button class="btn btn-orange" onclick="showPage('pageMenu')">🎮 Spielen</button>
         <button class="btn btn-blue"   onclick="showPage('pageHelp')">📖 Anleitung</button>
-        <button class="btn btn-red"    onclick="clearHighscores()" style="font-size:13px;padding:8px;max-width:180px;margin-top:4px;">🗑 Highscores löschen</button>
+        <button class="btn btn-gray"   onclick="showPage('pageSettings')" style="margin-top:15px;">⚙️ Einstellungen</button>
     </div>
 
     <!-- ═══════════════════════════════
@@ -183,10 +167,7 @@
     <div id="pageHelp" class="page page-overlay">
         <h2>📖 Spielanleitung</h2>
         <div class="rule-box">
-            <b>So geht's:</b><br>
-            Hüpfe auf die Plattform mit der <b>richtigen Antwort</b>!<br>
-            Falsche Plattformen <b>brechen weg</b>.<br>
-            ⬅️ ➡️ Tasten oder Finger zum Steuern.
+            <b>So geht's:</b><br>Hüpfe auf die Plattform mit der <b>richtigen Antwort</b>!<br>Falsche Plattformen <b>brechen weg</b>.<br>⬅️ ➡️ Tasten oder Finger zum Steuern.
         </div>
         <div class="rule-box">
             <b>Gadgets:</b>
@@ -199,15 +180,30 @@
                 <div>⚠️ Gadgets auf <b>falschen</b> Plattformen gehen verloren!</div>
             </div>
         </div>
-        <div class="rule-box" style="font-size:13px;">
-            <b>Wolken ☁️</b> sind sichere Plattformen ohne Rechnung.<br>
-            <b>Schutzschild 🛡️</b> rettet dich einmal vor einer falschen Plattform.
+        <button class="btn btn-gray" onclick="showPage('pageMain')">⬅ Zurück</button>
+    </div>
+
+    <!-- ═══════════════════════════════
+         SEITE 4 – EINSTELLUNGEN
+    ═══════════════════════════════ -->
+    <div id="pageSettings" class="page page-overlay">
+        <h2>⚙️ Einstellungen</h2>
+        <div class="rule-box" style="padding: 20px;">
+            <div class="slider-container">
+                <label>🎵 Musik Lautstärke</label>
+                <input type="range" id="slideMusic" min="0" max="1" step="0.05" value="0.3">
+            </div>
+            <div class="slider-container">
+                <label>🔊 Effekte Lautstärke</label>
+                <input type="range" id="slideSfx" min="0" max="1" step="0.05" value="0.5">
+            </div>
+            <button class="btn btn-red" onclick="clearHighscores()" style="font-size:14px; padding:10px; margin-top:15px;">🗑 Highscores löschen</button>
         </div>
         <button class="btn btn-gray" onclick="showPage('pageMain')">⬅ Zurück</button>
     </div>
 
     <!-- ═══════════════════════════════
-         SEITE 4 – SPIEL HUD
+         SEITE 5 – SPIEL HUD
     ═══════════════════════════════ -->
     <div id="hud">
         <button onclick="pauseToMain()">⬅ Menü</button>
@@ -217,7 +213,7 @@
     <div id="gadgetToast"></div>
 
     <!-- ═══════════════════════════════
-         SEITE 5 – GAME OVER
+         SEITE 6 – GAME OVER
     ═══════════════════════════════ -->
     <div id="pageGameOver" class="page page-overlay" style="display:none;">
         <h2 style="color:#e74c3c;">Oh nein! 😢</h2>
@@ -230,20 +226,154 @@
 </div>
 
 <script>
-// ══════════════════════════════════════════════
 // PWA Service Worker registrieren
+if('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+
 // ══════════════════════════════════════════════
-if('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+// AUDIO ENGINE (EFFEKTE & MUSIK)
+// ══════════════════════════════════════════════
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// Audio-Busse für Musik und SFX
+const musicMaster = audioCtx.createGain();
+const sfxMaster = audioCtx.createGain();
+musicMaster.connect(audioCtx.destination);
+sfxMaster.connect(audioCtx.destination);
+
+// Lade gespeicherte Lautstärken
+let volMusic = parseFloat(localStorage.getItem('mh_vol_music') || '0.25');
+let volSfx   = parseFloat(localStorage.getItem('mh_vol_sfx')   || '0.5');
+musicMaster.gain.value = volMusic;
+sfxMaster.gain.value = volSfx;
+document.getElementById('slideMusic').value = volMusic;
+document.getElementById('slideSfx').value = volSfx;
+
+// Regler-Events
+document.getElementById('slideMusic').addEventListener('input', e => {
+    volMusic = parseFloat(e.target.value);
+    musicMaster.gain.value = volMusic;
+    localStorage.setItem('mh_vol_music', volMusic);
+});
+document.getElementById('slideSfx').addEventListener('change', e => { // 'change' löst aus wenn man loslässt
+    volSfx = parseFloat(e.target.value);
+    sfxMaster.gain.value = volSfx;
+    localStorage.setItem('mh_vol_sfx', volSfx);
+    playSound('jump'); // Test-Sound spielen
+});
+
+// Soundeffekte
+function playSound(type) {
+    if(audioCtx.state==='suspended') return;
+    const osc = audioCtx.createOscillator();
+    const env = audioCtx.createGain();
+    osc.connect(env); env.connect(sfxMaster);
+    const t = audioCtx.currentTime;
+    
+    if(type==='jump'){
+        osc.type='sine'; osc.frequency.setValueAtTime(400,t); osc.frequency.exponentialRampToValueAtTime(800,t+0.1);
+        env.gain.setValueAtTime(0.4,t); env.gain.exponentialRampToValueAtTime(0.01,t+0.1);
+        osc.start(t); osc.stop(t+0.1);
+    }
+    else if(type==='break'){
+        osc.type='sawtooth'; osc.frequency.setValueAtTime(150,t); osc.frequency.exponentialRampToValueAtTime(30,t+0.2);
+        env.gain.setValueAtTime(0.5,t); env.gain.exponentialRampToValueAtTime(0.01,t+0.2);
+        osc.start(t); osc.stop(t+0.2);
+    }
+    else if(type==='spring'){
+        osc.type='square'; osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(900,t+0.3);
+        env.gain.setValueAtTime(0.3,t); env.gain.exponentialRampToValueAtTime(0.01,t+0.3);
+        osc.start(t); osc.stop(t+0.3);
+    }
+    else if(type==='rocket'){
+        osc.type='sawtooth'; osc.frequency.setValueAtTime(100,t); osc.frequency.linearRampToValueAtTime(600,t+1.2);
+        env.gain.setValueAtTime(0.5,t); env.gain.exponentialRampToValueAtTime(0.01,t+1.2);
+        osc.start(t); osc.stop(t+1.2);
+    }
+    else if(type==='shield'){
+        osc.type='sine'; osc.frequency.setValueAtTime(500,t); osc.frequency.setValueAtTime(900,t+0.2);
+        env.gain.setValueAtTime(0.4,t); env.gain.exponentialRampToValueAtTime(0.01,t+0.3);
+        osc.start(t); osc.stop(t+0.3);
+    }
+    else if(type==='star'){
+        osc.type='sine'; osc.frequency.setValueAtTime(800,t); osc.frequency.exponentialRampToValueAtTime(1200,t+0.15);
+        env.gain.setValueAtTime(0.3,t); env.gain.exponentialRampToValueAtTime(0.01,t+0.15);
+        osc.start(t); osc.stop(t+0.15);
+    }
 }
+
+// ── Hintergrundmusik (Chiptune) ──
+const tuneMenu = [60,64,67,72, 69,65,60,65, 62,65,69,74, 67,64,60,64]; // Entspannt
+const tuneGame = [72,0,67,0, 64,67,72,0, 69,0,65,0, 60,65,69,0];       // Hüpfig
+
+let currentTune = [];
+let tuneIdx = 0;
+let nextNoteTime = 0;
+let musicTimer = null;
+let currentBpm = 100;
+
+function scheduleMusicNote(note, time) {
+    if(note === 0) return;
+    const osc = audioCtx.createOscillator();
+    const env = audioCtx.createGain();
+    osc.type = 'square'; // 8-Bit Retro Sound
+    osc.frequency.value = 440 * Math.pow(2, (note - 69) / 12);
+    
+    env.gain.setValueAtTime(0, time);
+    env.gain.linearRampToValueAtTime(0.15, time + 0.02);
+    env.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    
+    osc.connect(env);
+    env.connect(musicMaster);
+    osc.start(time);
+    osc.stop(time + 0.2);
+}
+
+function musicScheduler() {
+    while(nextNoteTime < audioCtx.currentTime + 0.1) {
+        scheduleMusicNote(currentTune[tuneIdx], nextNoteTime);
+        const secPerBeat = 60.0 / currentBpm;
+        nextNoteTime += 0.25 * secPerBeat; // 16tel Noten
+        tuneIdx = (tuneIdx + 1) % currentTune.length;
+    }
+    musicTimer = setTimeout(musicScheduler, 25);
+}
+
+function startMusic(tune, bpm) {
+    clearTimeout(musicTimer);
+    if(audioCtx.state === 'suspended') return; 
+    currentTune = tune;
+    currentBpm = bpm;
+    tuneIdx = 0;
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    musicScheduler();
+}
+
+function stopMusic() { clearTimeout(musicTimer); }
+
+// Audio muss durch User-Klick gestartet werden (Browser-Richtlinie)
+let audioInit = false;
+function initAudio() {
+    if(audioInit) return;
+    audioInit = true;
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    if(!gameRunning) startMusic(tuneMenu, 90);
+}
+window.addEventListener('pointerdown', initAudio, {once:true});
+window.addEventListener('keydown', initAudio, {once:true});
+
+// Musik stoppen wenn App im Hintergrund ist
+document.addEventListener('visibilitychange', () => {
+    if(document.hidden) audioCtx.suspend();
+    else if(audioInit) audioCtx.resume();
+});
 
 // ══════════════════════════════════════════════
 // PHYSIK & SCHWIERIGKEIT
 // ══════════════════════════════════════════════
 const DIFF_SETTINGS = {
-    easy:   { g: 0.15, j: -7,  s: -11.5, r: -12, ms: 5 },    // Entspricht dem alten "Schwer"
-    normal: { g: 0.35, j: -10.5, s: -17, r: -22, ms: 10 },  // Schön knackig
-    hard:   { g: 0.45, j: -12,   s: -19, r: -26, ms: 12 }   // Sehr schnell!
+    easy:   { g: 0.15, j: -7,  s: -11.5, r: -12, ms: 5 },
+    normal: { g: 0.35, j: -10.5, s: -17, r: -22, ms: 10 },
+    hard:   { g: 0.45, j: -12,   s: -19, r: -26, ms: 12 }
 };
 
 let currentDifficulty = 'normal';
@@ -263,14 +393,13 @@ function changeDiff(diff) {
     SPRING = DIFF_SETTINGS[diff].s;
     ROCKET_SPD = DIFF_SETTINGS[diff].r;
     MOVE_SPEED = DIFF_SETTINGS[diff].ms;
-
     renderHighscores();
 }
 
 // ══════════════════════════════════════════════
-// NAVIGATION
+// NAVIGATION & HIGHSCORE
 // ══════════════════════════════════════════════
-const PAGES = ['pageMain','pageMenu','pageHelp'];
+const PAGES = ['pageMain','pageMenu','pageHelp','pageSettings'];
 function showPage(id) {
     PAGES.forEach(p => {
         const el = document.getElementById(p);
@@ -283,9 +412,6 @@ function showPage(id) {
     if(id === 'pageMain') renderHighscores();
 }
 
-// ══════════════════════════════════════════════
-// HIGHSCORE (mit Schwierigkeitsgrad!)
-// ══════════════════════════════════════════════
 const HS_MODES = {
     addsub: '➕ Addition & Subtraktion',
     muldiv: '✖️ Multiplikation & Division',
@@ -300,26 +426,19 @@ function renderHighscores() {
     let any = false;
     const medals = ['🥇','🥈','🥉'];
     let i = 0;
-
     Object.entries(HS_MODES).forEach(([mode, label]) => {
         const hs = getHS(mode, currentDifficulty);
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${label}</td>
-            <td class="hs-rank">${hs > 0 ? medals[i]+' '+hs : '–'}</td>`;
+        tr.innerHTML = `<td>${label}</td><td class="hs-rank">${hs > 0 ? medals[i]+' '+hs : '–'}</td>`;
         tbody.appendChild(tr);
         if(hs > 0) any = true;
         i++;
     });
-    if(!any) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="2" class="no-score">Keine Highscores auf diesem Level. Leg los! 🚀</td>`;
-        tbody.appendChild(tr);
-    }
+    if(!any) tbody.innerHTML = `<tr><td colspan="2" class="no-score">Noch keine Highscores auf diesem Level! 🚀</td></tr>`;
 }
 
 function clearHighscores() {
-    if(confirm('Alle Highscores auf allen Schwierigkeiten wirklich löschen?')) {
+    if(confirm('Alle Highscores wirklich löschen?')) {
         Object.keys(HS_MODES).forEach(mode => {
             ['easy','normal','hard'].forEach(diff => localStorage.removeItem(`hs_${mode}_${diff}`));
         });
@@ -328,31 +447,7 @@ function clearHighscores() {
 }
 
 // ══════════════════════════════════════════════
-// AUDIO
-// ══════════════════════════════════════════════
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playSound(type) {
-    if(audioCtx.state==='suspended') audioCtx.resume();
-    const osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    const t=audioCtx.currentTime;
-    const s=(o,f0,f1,dur,wave='sine',vol=0.2)=>{
-        osc.type=wave;osc.frequency.setValueAtTime(f0,t);
-        osc.frequency.exponentialRampToValueAtTime(f1,t+dur);
-        gain.gain.setValueAtTime(vol,t);gain.gain.exponentialRampToValueAtTime(0.01,t+dur);
-        osc.start();osc.stop(t+dur);
-    };
-    if(type==='jump')   s('sine',400,800,0.1);
-    else if(type==='break')  s('sawtooth',150,30,0.2,undefined,0.3);
-    else if(type==='spring') s('square',300,900,0.3);
-    else if(type==='rocket') s('sawtooth',100,600,1.2,undefined,0.4);
-    else if(type==='shield') s('sine',500,900,0.3);
-    else if(type==='star')   s('sine',800,1200,0.15);
-    else if(type==='slow')   { osc.type='sine';osc.frequency.setValueAtTime(300,t);osc.frequency.linearRampToValueAtTime(100,t+0.5);gain.gain.setValueAtTime(0.2,t);gain.gain.exponentialRampToValueAtTime(0.01,t+0.5);osc.start();osc.stop(t+0.5);}
-}
-
-// ══════════════════════════════════════════════
-// SPIEL
+// SPIELMECHANIK
 // ══════════════════════════════════════════════
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -367,23 +462,17 @@ let score=0, highScore=0;
 let multi=1, shield=false, slow=false, slowT=0, starT=0;
 let player={x:200,y:300,r:12,vy:0,state:'normal',timer:0};
 let targetX=200, platforms=[];
-const PW=90, PH=50; // Platform Width/Height
+const PW=90, PH=50;
 
-// Farbpalette für bunte Plattformen
 const COLORS = [
-    { fill: '#ffb8b8', stroke: '#e84118' }, // Pastellrot / Dunkelrot
-    { fill: '#c7ecee', stroke: '#0984e3' }, // Pastellblau / Dunkelblau
-    { fill: '#badc58', stroke: '#6ab04c' }, // Pastellgrün / Dunkelgrün
-    { fill: '#f8c291', stroke: '#e55039' }, // Pastellorange / Orange
-    { fill: '#e056fd', stroke: '#be2edd' }, // Pastelllila / Dunkellila
-    { fill: '#f6e58d', stroke: '#f0932b' }  // Pastellgelb / Senfgelb
+    { fill: '#ffb8b8', stroke: '#e84118' }, { fill: '#c7ecee', stroke: '#0984e3' },
+    { fill: '#badc58', stroke: '#6ab04c' }, { fill: '#f8c291', stroke: '#e55039' },
+    { fill: '#e056fd', stroke: '#be2edd' }, { fill: '#f6e58d', stroke: '#f0932b' }
 ];
 
 const GADGETS=[
-    {id:'rocket',emoji:'🚀',chance:0.06},
-    {id:'spring',emoji:'🌀',chance:0.12},
-    {id:'shield',emoji:'🛡️',chance:0.10},
-    {id:'star',  emoji:'⭐',chance:0.08},
+    {id:'rocket',emoji:'🚀',chance:0.06}, {id:'spring',emoji:'🌀',chance:0.12},
+    {id:'shield',emoji:'🛡️',chance:0.10}, {id:'star',  emoji:'⭐',chance:0.08},
     {id:'slow',  emoji:'❄️',chance:0.08},
 ];
 function pickGadget(){let r=Math.random(),acc=0;for(let g of GADGETS){acc+=g.chance;if(r<acc)return g.id;}return null;}
@@ -408,25 +497,20 @@ function createFloor(y){
         const p=genProblem();
         const opts=[p.ans,p.w].sort(()=>Math.random()-0.5);
         const x1=rnd(10,110), x2=rnd(200,300);
-        
-        // Zufällige Farbe für diese Ebene wählen (beide Plattformen bekommen die gleiche Farbe)
         const colorStyle = COLORS[Math.floor(Math.random() * COLORS.length)];
-        
         platforms.push({x:x1,y,type:'math',correct:opts[0]===p.ans,eq:p.eq,ans:opts[0],broken:false,item:pickGadget(), color: colorStyle});
         platforms.push({x:x2,y,type:'math',correct:opts[1]===p.ans,eq:p.eq,ans:opts[1],broken:false,item:pickGadget(), color: colorStyle});
     }
 }
 
 function initPlatforms(){
-    platforms=[];
-    platforms.push({x:155,y:550,type:'cloud',item:null});
+    platforms=[]; platforms.push({x:155,y:550,type:'cloud',item:null});
     for(let i=1;i<7;i++) createFloor(550-i*115);
 }
 
 function showToast(txt){
     toast.innerText=txt; toast.style.display='block';
-    clearTimeout(toast._t);
-    toast._t=setTimeout(()=>toast.style.display='none',2000);
+    clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.display='none',2000);
 }
 
 function activateGadget(id){
@@ -437,7 +521,6 @@ function activateGadget(id){
     else if(id==='slow'){playSound('slow');slow=true;slowT=180;showToast('❄️ Zeitlupe!');}
 }
 
-// Tastatur & Touch
 const keys={};
 window.addEventListener('keydown',e=>keys[e.key]=true);
 window.addEventListener('keyup',e=>keys[e.key]=false);
@@ -445,7 +528,6 @@ canvas.addEventListener('mousemove',e=>{targetX=e.clientX-canvas.getBoundingClie
 canvas.addEventListener('touchmove',e=>{e.preventDefault();targetX=e.touches[0].clientX-canvas.getBoundingClientRect().left;},{passive:false});
 
 let rawHeight = 0; 
-
 function update(){
     if(!gameRunning) return;
     const gravity = slow ? BASE_GRAVITY*0.45 : BASE_GRAVITY;
@@ -460,9 +542,7 @@ function update(){
     if(player.state==='rocket'){
         player.vy=ROCKET_SPD; player.timer--;
         if(player.timer<=0){player.state='normal';player.vy=JUMP;}
-    } else {
-        player.vy+=gravity;
-    }
+    } else player.vy+=gravity;
 
     player.x += (targetX-player.x)*0.2;
     if(player.x > canvas.width+player.r){player.x=-player.r; targetX=player.x;}
@@ -484,18 +564,12 @@ function update(){
                 else{playSound('jump');player.vy=JUMP;}
                 player.y=hit.y-player.r;
             } else {
-                if(shield){
-                    shield=false;playSound('shield');
-                    player.vy=JUMP;player.y=hit.y-player.r;
-                    hit.broken=true;showToast('🛡️ Schutzschild benutzt!');
-                } else {
-                    playSound('break');hit.broken=true;
-                }
+                if(shield){ shield=false;playSound('shield');player.vy=JUMP;player.y=hit.y-player.r;hit.broken=true;showToast('🛡️ Schutzschild benutzt!');} 
+                else { playSound('break');hit.broken=true; }
             }
         }
     }
 
-    // Kamera scrollt wenn Spieler über Mitte
     const mid = canvas.height/2;
     if(player.y < mid){
         const diff = mid - player.y;
@@ -503,19 +577,16 @@ function update(){
         rawHeight += diff;
         score = Math.floor(rawHeight / 20) * multi;
         hudScore.innerText = 'Höhe: '+score;
-        if(score > highScore) {
-            highScore = score;
-            hudHigh.innerText = '⭐ '+highScore;
-        }
+        if(score > highScore) { highScore = score; hudHigh.innerText = '⭐ '+highScore; }
         platforms.forEach(p=>p.y+=diff);
     }
 
     platforms = platforms.filter(p=>p.y < canvas.height+60);
     if(platforms[platforms.length-1].y > 100) createFloor(platforms[platforms.length-1].y-115);
 
-    // Game Over
     if(player.y > canvas.height){
         gameRunning=false;
+        stopMusic(); // Spielmusik stoppen
         const prev = getHS(currentMode, currentDifficulty);
         if(score > prev) setHS(currentMode, currentDifficulty, score);
         document.getElementById('goScore').innerText = 'Erreichte Höhe: '+score;
@@ -530,7 +601,7 @@ function drawGadgetIcon(p){
     if(!p.item) return;
     const g=GADGETS.find(g=>g.id===p.item);
     if(!g) return;
-    ctx.font='17px serif'; ctx.textAlign='center';
+    ctx.font="17px 'Comic Sans MS', sans-serif"; ctx.textAlign='center';
     ctx.fillText(g.emoji, p.x+PW/2, p.y-6);
 }
 
@@ -549,93 +620,54 @@ function draw(){
             continue;
         }
         if(p.type==='cloud'){
-            ctx.fillStyle='rgba(255,255,255,0.92)';
-            ctx.beginPath();
-            ctx.arc(p.x+15,p.y+20,18,0,Math.PI*2);
-            ctx.arc(p.x+45,p.y+10,22,0,Math.PI*2);
-            ctx.arc(p.x+75,p.y+20,18,0,Math.PI*2);
+            ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.beginPath();
+            ctx.arc(p.x+15,p.y+20,18,0,Math.PI*2); ctx.arc(p.x+45,p.y+10,22,0,Math.PI*2); ctx.arc(p.x+75,p.y+20,18,0,Math.PI*2);
             ctx.fill();
         } else {
-            // Nutze die Farbe aus dem Plattform-Objekt
             ctx.fillStyle = p.color ? p.color.fill : '#f8c291';
-            ctx.beginPath();
-            if(ctx.roundRect)ctx.roundRect(p.x,p.y,PW,PH,8); else ctx.rect(p.x,p.y,PW,PH);
-            ctx.fill();
-            ctx.lineWidth=3; 
-            ctx.strokeStyle = p.color ? p.color.stroke : '#e55039'; 
-            ctx.stroke();
+            ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(p.x,p.y,PW,PH,8); else ctx.rect(p.x,p.y,PW,PH);
+            ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle = p.color ? p.color.stroke : '#e55039'; ctx.stroke();
             
-            // Textfarbe bleibt dunkel für guten Kontrast
             ctx.fillStyle='#2c3e50'; ctx.font="bold 15px 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif"; ctx.textAlign='center';
             ctx.fillText(p.eq, p.x+PW/2, p.y+19);
-            // Ergebnis in der entsprechenden Rand-Farbe oder dunkelrot
-            ctx.fillStyle= p.color ? p.color.stroke : '#c0392b'; 
-            ctx.font="bold 19px 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif";
+            ctx.fillStyle= p.color ? p.color.stroke : '#c0392b'; ctx.font="bold 19px 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif";
             ctx.fillText('= '+p.ans, p.x+PW/2, p.y+41);
         }
         drawGadgetIcon(p);
     }
 
     if(gameRunning){
-        if(shield){
-            ctx.beginPath();ctx.arc(player.x,player.y,player.r+9,0,Math.PI*2);
-            ctx.fillStyle='rgba(255,215,0,0.22)';ctx.fill();
-            ctx.strokeStyle='gold';ctx.lineWidth=2;ctx.stroke();
-        }
-        if(multi>1){
-            ctx.beginPath();ctx.arc(player.x,player.y,player.r+9,0,Math.PI*2);
-            ctx.fillStyle='rgba(255,140,0,0.22)';ctx.fill();
-        }
+        if(shield){ ctx.beginPath();ctx.arc(player.x,player.y,player.r+9,0,Math.PI*2); ctx.fillStyle='rgba(255,215,0,0.22)';ctx.fill(); ctx.strokeStyle='gold';ctx.lineWidth=2;ctx.stroke(); }
+        if(multi>1){ ctx.beginPath();ctx.arc(player.x,player.y,player.r+9,0,Math.PI*2); ctx.fillStyle='rgba(255,140,0,0.22)';ctx.fill(); }
         ctx.fillStyle = player.state==='rocket' ? '#f1c40f' : '#38ada9';
-        ctx.beginPath();ctx.arc(player.x,player.y,player.r,0,Math.PI*2);ctx.fill();
-        ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
-        if(player.state==='rocket'){
-            ctx.fillStyle='#e55039';ctx.beginPath();
-            ctx.moveTo(player.x-6,player.y+player.r);
-            ctx.lineTo(player.x, player.y+player.r+rnd(14,24));
-            ctx.lineTo(player.x+6,player.y+player.r);ctx.fill();
-        }
+        ctx.beginPath();ctx.arc(player.x,player.y,player.r,0,Math.PI*2);ctx.fill(); ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
+        if(player.state==='rocket'){ ctx.fillStyle='#e55039';ctx.beginPath(); ctx.moveTo(player.x-6,player.y+player.r); ctx.lineTo(player.x, player.y+player.r+rnd(14,24)); ctx.lineTo(player.x+6,player.y+player.r);ctx.fill(); }
     }
     requestAnimationFrame(()=>{update();draw();});
 }
 
-// ══════════════════════════════════════════════
-// SPIELSTEUERUNG
-// ══════════════════════════════════════════════
 function startGame(mode){
     if(audioCtx.state==='suspended') audioCtx.resume();
-    currentMode = mode;
-    highScore   = getHS(mode, currentDifficulty);
+    currentMode = mode; highScore = getHS(mode, currentDifficulty);
     PAGES.forEach(p=>document.getElementById(p).style.display='none');
-    pageGO.style.display='none';
-    hud.style.display='flex';
-    hudHigh.innerText='⭐ '+highScore;
+    pageGO.style.display='none'; hud.style.display='flex'; hudHigh.innerText='⭐ '+highScore;
     rawHeight=0; score=0; multi=1; shield=false; slow=false; slowT=0; starT=0;
-    player={x:200,y:300,r:12,vy:0,state:'normal',timer:0};
-    targetX=200;
+    player={x:200,y:300,r:12,vy:0,state:'normal',timer:0}; targetX=200;
     for(let k in keys) keys[k]=false;
-    initPlatforms();
-    gameRunning=true;
+    initPlatforms(); gameRunning=true;
+    
+    startMusic(tuneGame, 130); // Schnelle Musik für das Spiel
 }
 
-function restartGame(){
-    pageGO.style.display='none';
-    startGame(currentMode);
-}
+function restartGame(){ pageGO.style.display='none'; startGame(currentMode); }
 
 function pauseToMain(){
-    gameRunning=false;
-    hud.style.display='none';
-    pageGO.style.display='none';
-    toast.style.display='none';
+    gameRunning=false; hud.style.display='none'; pageGO.style.display='none'; toast.style.display='none';
     showPage('pageMain');
+    startMusic(tuneMenu, 90); // Ruhige Musik für das Menü
 }
 
-document.body.addEventListener('click',()=>{if(audioCtx.state==='suspended')audioCtx.resume();},{once:true});
-document.body.addEventListener('touchstart',()=>{if(audioCtx.state==='suspended')audioCtx.resume();},{once:true});
-
-// Init
-changeDiff('normal'); // Startet standardmäßig auf "Normal"
+changeDiff('normal');
 draw();
 </script>
 </body>
