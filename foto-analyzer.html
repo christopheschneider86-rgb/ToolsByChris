@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FotoAnalyzer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
+<style>
+:root{--bg:#0d0d14;--bg2:#13131f;--bg3:#1a1a2e;--border:#2d2d44;--accent:#6366f1;--accent2:#f59e0b;--text:#e2e8f0;--text2:#94a3b8;--ok:#10b981;--warn:#f59e0b;--pink:#ec4899}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:linear-gradient(135deg,#16163a,#0d0d14);border-bottom:1px solid var(--border);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.logo{font-size:1.35rem;font-weight:800}.logo span{color:var(--accent)}
+.hdr-btns{display:flex;gap:10px;align-items:center}
+.pick-btn{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
+.pick-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(99,102,241,.35)}
+.ghost-btn{background:transparent;border:1px solid var(--border);color:var(--text2);padding:9px 16px;border-radius:10px;cursor:pointer;font-size:.85rem;transition:all .2s;display:none}
+.ghost-btn:hover{border-color:var(--accent);color:var(--accent)}
+#hero{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 62px);padding:40px 20px;text-align:center}
+.hero-icon{font-size:5rem;margin-bottom:20px;filter:drop-shadow(0 0 30px rgba(99,102,241,.5))}
+#hero h1{font-size:2.1rem;font-weight:800;margin-bottom:12px;background:linear-gradient(135deg,#e2e8f0,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#hero p{color:var(--text2);max-width:480px;line-height:1.7;margin-bottom:32px;font-size:.95rem}
+.hint{margin-top:16px;font-size:.78rem;color:var(--text2);opacity:.7}
+#prog-wrap{display:none;padding:32px;max-width:600px;margin:60px auto}
+.prog-title{font-weight:600;margin-bottom:12px}
+.prog-bar-bg{background:var(--bg3);border-radius:99px;height:10px;overflow:hidden}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .3s;width:0%}
+.prog-sub{color:var(--text2);font-size:.85rem;margin-top:10px}
+#dash{display:none;padding:24px 28px;max-width:1400px;margin:0 auto}
+.section-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);margin-bottom:14px;margin-top:28px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 16px;text-align:center;transition:border-color .2s}
+.stat-card:hover{border-color:var(--accent)}
+.stat-num{font-size:1.7rem;font-weight:800;color:var(--accent);line-height:1}
+.stat-lbl{color:var(--text2);font-size:.78rem;margin-top:6px}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px}
+.chart-card h3{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:14px}
+.chart-card canvas{max-height:260px}
+.tips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.tip{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;border-left:3px solid var(--accent)}
+.tip.warn{border-left-color:var(--warn)}.tip.ok{border-left-color:var(--ok)}.tip.pink{border-left-color:var(--pink)}
+.tip-icon{font-size:1.4rem;margin-bottom:8px}.tip-title{font-weight:700;font-size:.92rem;margin-bottom:6px}
+.tip-text{color:var(--text2);font-size:.85rem;line-height:1.6}
+.no-data{color:var(--text2);font-size:.85rem;padding:20px;text-align:center}
+@media(max-width:600px){.charts-grid{grid-template-columns:1fr}header{flex-direction:column;gap:12px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Foto<span>Analyzer</span> 📷</div>
+  <div class="hdr-btns">
+    <button class="ghost-btn" id="debug-btn" onclick="showDebug()">🔍 EXIF-Inspector</button>
+    <button class="ghost-btn" id="reselect-btn" onclick="pickFolder()">↺ Neuer Ordner</button>
+    <button class="pick-btn" id="hdr-pick" onclick="pickFolder()">📁 Ordner wählen</button>
+  </div>
+</header>
+
+<div id="hero">
+  <div class="hero-icon">📷</div>
+  <h1>Deine Fotografie-Gewohnheiten</h1>
+  <p>Wähle einen Ordner mit deinen Fotos – alle EXIF-Daten werden <strong>lokal auf deinem Rechner</strong> ausgewertet. Kein Upload, keine Cloud.</p>
+  <button class="pick-btn" style="padding:14px 32px;font-size:1rem" onclick="pickFolder()">📁 Ordner auswählen</button>
+  <p class="hint">Unterstützt JPG · JPEG · TIFF · Unterordner werden automatisch durchsucht<br>⚠️ Bitte Chrome oder Edge verwenden</p>
+</div>
+
+<div id="prog-wrap">
+  <p class="prog-title" id="prog-title">Suche Bilddateien…</p>
+  <div class="prog-bar-bg"><div class="prog-bar" id="prog-bar"></div></div>
+  <p class="prog-sub" id="prog-sub"></p>
+</div>
+
+<div id="dash">
+  <div class="section-title">Übersicht</div>
+  <div class="stats-row" id="stats-row"></div>
+  <div class="section-title" style="margin-top:24px">Auswertungen</div>
+  <div class="charts-grid" id="charts-grid"></div>
+  <div class="section-title" style="margin-top:24px">💡 Tipps für dich</div>
+  <div class="tips-grid" id="tips-grid"></div>
+  <div style="height:40px"></div>
+</div>
+
+<script>
+let activeCharts = [], _sample = null;
+
+/* ── EXIF-Inspector ─────────────────────────────────────── */
+function showDebug() {
+  if (!_sample) return alert('Keine EXIF-Daten geladen.');
+  const rows = Object.entries(_sample)
+    .filter(([,v]) => v != null && String(v).trim() !== '' && String(v) !== 'undefined')
+    .sort((a,b) => String(a[0]).localeCompare(String(b[0])))
+    .map(([k,v]) => `<tr><td style="color:#94a3b8;padding:3px 12px 3px 0;font-size:.8rem;white-space:nowrap">${k}</td><td style="font-size:.8rem;word-break:break-all">${String(v).replace(/\0/g,'·').slice(0,200)}</td></tr>`).join('');
+  const w = window.open('','_blank','width=720,height=640');
+  w.document.write(`<html><body style="background:#0d0d14;color:#e2e8f0;font-family:monospace;padding:20px"><h3 style="color:#6366f1;margin-bottom:14px">EXIF-Inspector – erstes Bild</h3><table>${rows}</table></body></html>`);
+}
+
+/* ── FILE COLLECT ───────────────────────────────────────── */
+async function collectFiles(dir, out=[]) {
+  for await (const e of dir.values()) {
+    if (e.kind==='file' && /\.(jpe?g|tiff?)$/i.test(e.name)) out.push(e);
+    else if (e.kind==='directory') await collectFiles(e, out);
+  }
+  return out;
+}
+
+/* ── READ EXIF via exif-js ──────────────────────────────── */
+function readExif(arrayBuffer) {
+  return new Promise(res => {
+    try {
+      const tags = EXIF.readFromBinaryFile(arrayBuffer);
+      res(tags || null);
+    } catch { res(null); }
+  });
+}
+
+/* ── LENS EXTRACTION ────────────────────────────────────── */
+// exif-js maps EXIF tag 0xA434 (42036) as "LensModel" but sometimes only by numeric key
+// Also try all known aliases
+function extractLens(t) {
+  const keys = [
+    'LensModel',        // Standard EXIF 0xA434
+    42036,              // numeric tag ID für LensModel
+    'Lens',             // exif-js alias
+    'LensInfo',
+    'LensSpecification',// 0xA432
+    42034,
+  ];
+  for (const k of keys) {
+    const v = t[k];
+    if (!v) continue;
+    if (typeof v === 'string') {
+      const s = v.trim().replace(/\0/g,'');
+      if (s.length > 2 && !/^[\d\s,|]+$/.test(s) && s.toLowerCase() !== 'n/a') return s;
+    }
+    if (Array.isArray(v) && v.length >= 2 && v[0]) {
+      // LensSpecification: [minFL, maxFL, minAp, maxAp]
+      const [fMin, fMax, aMin, aMax] = v;
+      const fPart = fMin === fMax ? `${fMin}mm` : `${fMin}-${fMax}mm`;
+      const aPart = aMin ? ` f/${aMin}${aMin!==aMax?`-${aMax}`:''}` : '';
+      return fPart + aPart;
+    }
+  }
+  return null;
+}
+
+/* ── PICK FOLDER ────────────────────────────────────────── */
+async function pickFolder() {
+  if (!('showDirectoryPicker' in window)) {
+    alert('Dein Browser unterstützt den Ordnerzugriff nicht.\nBitte Chrome oder Edge (Desktop) verwenden.');
+    return;
+  }
+  try {
+    const dir = await window.showDirectoryPicker();
+    await runAnalysis(dir);
+  } catch(e) { if (e.name!=='AbortError') console.error(e); }
+}
+
+/* ── MAIN ANALYSIS ──────────────────────────────────────── */
+async function runAnalysis(dir) {
+  activeCharts.forEach(c=>c.destroy()); activeCharts=[];
+  _sample = null;
+  document.getElementById('hero').style.display='none';
+  document.getElementById('dash').style.display='none';
+  document.getElementById('hdr-pick').style.display='none';
+  document.getElementById('debug-btn').style.display='none';
+  document.getElementById('reselect-btn').style.display='none';
+  const pw=document.getElementById('prog-wrap'); pw.style.display='block';
+  document.getElementById('prog-title').textContent='Suche Bilddateien…';
+  document.getElementById('prog-bar').style.width='0%';
+  document.getElementById('prog-sub').textContent='';
+
+  const entries = await collectFiles(dir);
+  const total = entries.length;
+  if (!total) {
+    document.getElementById('prog-title').textContent='Keine Bilddateien gefunden.';
+    document.getElementById('prog-sub').textContent='Bitte einen Ordner mit JPG/JPEG/TIFF-Fotos wählen.';
+    return;
+  }
+  document.getElementById('prog-title').textContent=`Lese EXIF aus ${total} Fotos…`;
+
+  const records=[];
+  for (let i=0; i<total; i++) {
+    try {
+      const file = await entries[i].getFile();
+      // Read as ArrayBuffer for exif-js
+      const buf = await file.arrayBuffer();
+      const tags = await readExif(buf);
+      if (tags && Object.keys(tags).length > 0) {
+        records.push(tags);
+        if (!_sample) _sample = tags;
+      }
+    } catch(e) { console.warn('Fehler bei Datei:', e); }
+    const pct=Math.round((i+1)/total*100);
+    document.getElementById('prog-bar').style.width=pct+'%';
+    document.getElementById('prog-sub').textContent=`${i+1} / ${total} verarbeitet`;
+    if (i%20===0) await new Promise(r=>setTimeout(r,0));
+  }
+
+  pw.style.display='none';
+  document.getElementById('reselect-btn').style.display='block';
+  document.getElementById('debug-btn').style.display='block';
+  buildDashboard(records, total);
+}
+
+/* ── HELPERS ─────────────────────────────────────────────── */
+function rat(v) {
+  if (v==null) return null;
+  if (typeof v==='number') return v;
+  if (typeof v==='object' && 'numerator' in v) return v.denominator ? v.numerator/v.denominator : null;
+  return parseFloat(v)||null;
+}
+function flCat(fl) {
+  if (fl<20) return '< 20 mm';
+  if (fl<35) return '20–35 mm';
+  if (fl<50) return '35–50 mm';
+  if (fl<85) return '50–85 mm';
+  if (fl<135) return '85–135 mm';
+  if (fl<300) return '135–300 mm';
+  return '> 300 mm';
+}
+const CAT_ORDER=['< 20 mm','20–35 mm','35–50 mm','50–85 mm','85–135 mm','135–300 mm','> 300 mm'];
+const CAT_NAMES={'< 20 mm':'Ultraweitwinkel','20–35 mm':'Weitwinkel','35–50 mm':'Normalbereich','50–85 mm':'Porträt','85–135 mm':'Kurztele','135–300 mm':'Tele','> 300 mm':'Supertele'};
+const LENS_TIPS={'< 20 mm':'z.B. 14mm oder 16mm – ideal für Landschaft & Architektur','20–35 mm':'z.B. 24mm oder 28mm – perfekt für Street & Reise','35–50 mm':'z.B. 35mm oder 50mm – das "Auge des Menschen"','50–85 mm':'z.B. 50mm f/1.8 oder 85mm – Klassiker für schmeichelhafte Porträts','85–135 mm':'z.B. 85mm oder 100mm Makro – Porträts & feine Details','135–300 mm':'z.B. 70–200mm Zoom – vielseitig für Events & Sport','> 300 mm':'z.B. 400mm Supertele – für Wildlife & Sport aus Distanz'};
+const PALETTE=['#6366f1','#f59e0b','#10b981','#ec4899','#3b82f6','#8b5cf6','#14b8a6','#f97316','#e11d48','#0ea5e9'];
+
+/* ── BUILD DASHBOARD ─────────────────────────────────────── */
+function buildDashboard(data, totalFiles) {
+  const focalArr=[],apArr=[],isoArr=[],cameras={},lenses={},hours=new Array(24).fill(0),fvaCats={};
+
+  for (const t of data) {
+    const fl35=rat(t.FocalLengthIn35mmFilm);
+    const fl=(fl35&&fl35>0)?fl35:rat(t.FocalLength);
+    const fn=rat(t.FNumber)||rat(t.ApertureValue);
+    const iso=rat(t.ISOSpeedRatings)||rat(t.PhotographicSensitivity);
+    const make=t.Make?String(t.Make).trim().replace(/\0/g,''):null;
+    const model=t.Model?String(t.Model).trim().replace(/\0/g,''):null;
+    const lens=extractLens(t);
+    const dt=t.DateTimeOriginal||t.DateTime;
+
+    if (fl&&fl>0&&fl<3000) focalArr.push(Math.round(fl));
+    if (fn&&fn>0&&fn<90) apArr.push(parseFloat(fn.toFixed(1)));
+    if (iso&&iso>0) isoArr.push(iso);
+
+    const cam=model?(make?`${make} ${model}`:model):make;
+    if (cam) cameras[cam]=(cameras[cam]||0)+1;
+    if (lens) lenses[lens]=(lenses[lens]||0)+1;
+
+    if (typeof dt==='string') {
+      const h=parseInt(dt.split(' ')[1]?.split(':')[0]);
+      if (!isNaN(h)&&h<24) hours[h]++;
+    }
+    if (fl&&fn) { const c=flCat(fl); if(!fvaCats[c])fvaCats[c]=[]; fvaCats[c].push(parseFloat(fn.toFixed(1))); }
+  }
+
+  /* stat cards */
+  const dts=data.map(t=>t.DateTimeOriginal||t.DateTime).filter(Boolean).sort();
+  const fmtD=s=>s?String(s).split(' ')[0]?.replace(/:/g,'.'):'–';
+  const avgFL=focalArr.length?Math.round(focalArr.reduce((a,b)=>a+b,0)/focalArr.length):'–';
+  const avgFN=apArr.length?(apArr.reduce((a,b)=>a+b,0)/apArr.length).toFixed(1):'–';
+
+  document.getElementById('stats-row').innerHTML=[
+    [data.length,'Fotos ausgewertet'],
+    [totalFiles-data.length,'ohne EXIF übersprungen'],
+    [Object.keys(cameras).length,'Kameras'],
+    [Object.keys(lenses).length,'Objektive'],
+    [avgFL!=='–'?avgFL+' mm':'–','Ø Brennweite (KB-äqui.)'],
+    ['f/'+avgFN,'Ø Blende'],
+    [fmtD(dts[0]),'Ältestes Foto'],
+    [fmtD(dts[dts.length-1]),'Neustes Foto'],
+  ].map(([n,l])=>`<div class="stat-card"><div class="stat-num">${n}</div><div class="stat-lbl">${l}</div></div>`).join('');
+
+  const grid=document.getElementById('charts-grid'); grid.innerHTML='';
+
+  // 1 Brennweiten
+  const flB=Object.fromEntries(CAT_ORDER.map(k=>[k,0]));
+  focalArr.forEach(fl=>{flB[flCat(fl)]++;});
+  addBar(grid,'📐 Brennweiten-Verteilung (KB-äquivalent)',CAT_ORDER,CAT_ORDER.map(k=>flB[k]),'#6366f1');
+
+  // 2 Blende
+  const fnB={};
+  apArr.forEach(a=>{const k='f/'+a;fnB[k]=(fnB[k]||0)+1;});
+  const fnS=Object.entries(fnB).sort((a,b)=>parseFloat(a[0].slice(2))-parseFloat(b[0].slice(2))).slice(0,16);
+  addBar(grid,'🎚️ Blenden-Verteilung',fnS.map(x=>x[0]),fnS.map(x=>x[1]),'#f59e0b');
+
+  // 3 ISO
+  const isoB={'ISO ≤100':0,'ISO 100–200':0,'ISO 200–400':0,'ISO 400–800':0,'ISO 800–1600':0,'ISO 1600–3200':0,'ISO 3200–6400':0,'ISO 6400+':0};
+  isoArr.forEach(i=>{
+    if(i<=100)isoB['ISO ≤100']++;else if(i<=200)isoB['ISO 100–200']++;else if(i<=400)isoB['ISO 200–400']++;
+    else if(i<=800)isoB['ISO 400–800']++;else if(i<=1600)isoB['ISO 800–1600']++;else if(i<=3200)isoB['ISO 1600–3200']++;
+    else if(i<=6400)isoB['ISO 3200–6400']++;else isoB['ISO 6400+']++;
+  });
+  addBar(grid,'💡 ISO-Verteilung',Object.keys(isoB),Object.values(isoB),'#10b981');
+
+  // 4 Tageszeit
+  addBar(grid,'🕐 Aufnahmezeiten (Stunde)',Array.from({length:24},(_,i)=>`${i}h`),hours,'#8b5cf6');
+
+  // 5 Kamera
+  const topCams=Object.entries(cameras).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if (topCams.length) addDoughnut(grid,'📸 Kamera-Nutzung',topCams.map(x=>x[0]),topCams.map(x=>x[1]));
+
+  // 6 Objektive
+  const topLens=Object.entries(lenses).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if (topLens.length) {
+    addDoughnut(grid,'🔭 Objektiv-Nutzung',topLens.map(x=>x[0]),topLens.map(x=>x[1]));
+  } else {
+    const c=document.createElement('div');c.className='chart-card';
+    c.innerHTML=`<h3>🔭 Objektiv-Nutzung</h3><p class="no-data">Kein Objektivname in EXIF gefunden.<br><small style="opacity:.7">Nutze den 🔍 EXIF-Inspector um zu prüfen, unter welchem Feld deine Kamera das Objektiv speichert.</small></p>`;
+    grid.appendChild(c);
+  }
+
+  // 7 Ø Blende je Brennweiten-Kategorie
+  const fvaCatKeys=CAT_ORDER.filter(k=>fvaCats[k]&&fvaCats[k].length>0);
+  if (fvaCatKeys.length>1) {
+    const fvaAvg=fvaCatKeys.map(k=>{const a=fvaCats[k];return+(a.reduce((s,v)=>s+v,0)/a.length).toFixed(1);});
+    addBar(grid,'📊 Ø Blende je Brennweiten-Bereich',fvaCatKeys,fvaAvg,'#ec4899',true);
+  }
+
+  buildTips(focalArr,apArr,isoArr,cameras,lenses,hours,flB,fvaCats);
+  document.getElementById('dash').style.display='block';
+}
+
+function addBar(parent,title,labels,values,color,isFloat=false){
+  const card=document.createElement('div');card.className='chart-card';
+  card.innerHTML=`<h3>${title}</h3><canvas></canvas>`;parent.appendChild(card);
+  const c=new Chart(card.querySelector('canvas').getContext('2d'),{
+    type:'bar',data:{labels,datasets:[{data:values,backgroundColor:color+'bb',borderColor:color,borderWidth:1,borderRadius:5}]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>isFloat?`Ø f/${ctx.parsed.y}`:ctx.parsed.y}}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#2a2a3e'}},y:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'#2a2a3e'}}}}
+  });activeCharts.push(c);
+}
+
+function addDoughnut(parent,title,labels,values){
+  const card=document.createElement('div');card.className='chart-card';
+  card.innerHTML=`<h3>${title}</h3><canvas></canvas>`;parent.appendChild(card);
+  const c=new Chart(card.querySelector('canvas').getContext('2d'),{
+    type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:PALETTE.map(c=>c+'cc'),borderColor:PALETTE,borderWidth:1}]},
+    options:{responsive:true,plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:10},boxWidth:12,padding:8}}}}
+  });activeCharts.push(c);
+}
+
+/* ── TIPS ─────────────────────────────────────────────────── */
+function buildTips(fl,ap,iso,cams,lens,hours,flB,fvaCats){
+  const tips=[],total=fl.length;
+
+  const topCat=CAT_ORDER.reduce((a,b)=>flB[a]>=flB[b]?a:b);
+  if(flB[topCat]>0){
+    const pct=Math.round(flB[topCat]/total*100);
+    tips.push({cls:'',icon:'🎯',title:`Du liebst ${CAT_NAMES[topCat]}!`,text:`${pct}% deiner Aufnahmen entstehen im Bereich ${topCat}. Das zeigt einen klaren, persönlichen Stil.`});
+  }
+
+  const empty=CAT_ORDER.filter(k=>flB[k]===0);
+  if(empty.length){
+    const pick=empty[Math.floor(Math.random()*empty.length)];
+    tips.push({cls:'warn',icon:'🔭',title:`Unentdeckt: ${pick} (${CAT_NAMES[pick]})`,text:`Du hast noch keine Aufnahmen in diesem Bereich. Tipp: ${LENS_TIPS[pick]}`});
+  }
+
+  if(iso.length){
+    const hiPct=Math.round(iso.filter(i=>i>1600).length/iso.length*100);
+    if(hiPct>30) tips.push({cls:'warn',icon:'🌙',title:`Häufig hohes ISO (${hiPct}% über ISO 1600)`,text:`Du fotografierst oft bei wenig Licht. Ein lichtstarkes Objektiv (f/1.8) oder Stativ kann Rauschen deutlich reduzieren.`});
+    else tips.push({cls:'ok',icon:'☀️',title:'Gutes ISO-Management',text:'Du arbeitest überwiegend bei niedrigen ISO-Werten – das spricht für bewussten Umgang mit Licht.'});
+  }
+
+  if(ap.length){
+    const widePct=Math.round(ap.filter(a=>a<=2.0).length/ap.length*100);
+    if(widePct>40) tips.push({cls:'pink',icon:'🌸',title:'Du liebst Bokeh!',text:`${widePct}% deiner Fotos mit weit geöffneter Blende (≤ f/2.0). Probiere gelegentlich f/5.6–f/8 für mehr Tiefenschärfe.`});
+    if(ap.filter(a=>a>=11).length/ap.length>0.3) tips.push({cls:'warn',icon:'💎',title:'Viele Aufnahmen mit kleiner Blende',text:`Beugungsunschärfe ab ca. f/11–f/16 kann die Detailschärfe reduzieren – achte darauf vor allem bei Studioaufnahmen.`});
+  }
+
+  const hTotal=hours.reduce((a,b)=>a+b,0);
+  if(hTotal>0){
+    const golden=hours.slice(6,9).reduce((a,b)=>a+b,0)+hours.slice(17,20).reduce((a,b)=>a+b,0);
+    const midday=hours.slice(11,14).reduce((a,b)=>a+b,0);
+    if(golden/hTotal>0.25) tips.push({cls:'ok',icon:'🌅',title:'Goldene Stunde – du machst es richtig!',text:`Du fotografierst häufig in den goldenen Stunden (6–9 & 17–20 Uhr). Dieses weiche Licht macht den ganzen Unterschied.`});
+    else if(midday/hTotal>0.4) tips.push({cls:'warn',icon:'🌤️',title:'Viele Mittagsaufnahmen',text:`Hartes Mittagslicht erzeugt tiefe Schatten. Versuche öfter früh morgens oder abends zu fotografieren.`});
+  }
+
+  const numC=Object.keys(cams).length;
+  if(numC>1){
+    const top=Object.entries(cams).sort((a,b)=>b[1]-a[1])[0];
+    const pct=Math.round(top[1]/Object.values(cams).reduce((a,b)=>a+b,0)*100);
+    tips.push({cls:'',icon:'📷',title:`${numC} Kameras gefunden`,text:`Deine meistgenutzte Kamera: ${top[0]} (${pct}% aller Aufnahmen).`});
+  }
+
+  const numL=Object.keys(lens).length;
+  if(numL>0){
+    const topL=Object.entries(lens).sort((a,b)=>b[1]-a[1])[0];
+    const pct=Math.round(topL[1]/Object.values(lens).reduce((a,b)=>a+b,0)*100);
+    tips.push({cls:'',icon:'🔭',title:`${numL} Objektive erkannt`,text:`Dein meistgenutztes Objektiv: ${topL[0]} (${pct}% aller Aufnahmen).`});
+  }
+
+  const cons=Object.entries(fvaCats).find(([,arr])=>{
+    if(arr.length<20)return false;
+    const avg=arr.reduce((a,b)=>a+b,0)/arr.length;
+    return Math.sqrt(arr.reduce((a,b)=>a+(b-avg)**2,0)/arr.length)<0.5;
+  });
+  if(cons){
+    const [cat,arr]=cons;
+    const avg=(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1);
+    tips.push({cls:'pink',icon:'🎨',title:`Konsistente Blende bei ${cat}`,text:`Im Bereich ${cat} verwendest du fast immer f/${avg}. Experimentiere gelegentlich mit anderen Blenden für neue Bildsprachen.`});
+  }
+
+  document.getElementById('tips-grid').innerHTML=tips.map(t=>
+    `<div class="tip ${t.cls}"><div class="tip-icon">${t.icon}</div><div class="tip-title">${t.title}</div><div class="tip-text">${t.text}</div></div>`
+  ).join('')||'<p class="no-data">Nicht genug EXIF-Daten für Tipps.</p>';
+}
+</script>
+</body>
+</html>
