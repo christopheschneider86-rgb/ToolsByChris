@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRCraft – QR-Code-Generator</title>
+    <meta name="description" content="QR-Codes kostenlos erstellen – URL, Wi-Fi, vCard, E-Mail, SMS, Event und mehr. Mit Farbwahl, Logoeinbettung und Download als PNG & SVG.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;700;800&family=Outfit:wght@500;700;800&family=Pacifico&family=Roboto:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <!-- Reliable QR library with clean API -->
+    <script src="qrcode.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="wrap header-inner">
+        <div class="logo">
+            <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#6366f1"/><rect x="6" y="6" width="8" height="8" rx="1.5" fill="white"/><rect x="18" y="6" width="8" height="8" rx="1.5" fill="white"/><rect x="6" y="18" width="8" height="8" rx="1.5" fill="white"/><rect x="18" y="18" width="3" height="3" rx="0.5" fill="white"/><rect x="23" y="18" width="3" height="3" rx="0.5" fill="white"/><rect x="18" y="23" width="3" height="3" rx="0.5" fill="white"/></svg>
+            QRCraft
+        </div>
+        <nav>
+            <a href="#generator">Generator</a>
+            <a href="#features">Features</a>
+            <a href="#types">QR-Typen</a>
+        </nav>
+        <a href="#generator" class="btn-primary">QR erstellen</a>
+    </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="wrap hero-inner">
+        <div>
+            <div class="hero-badge">✨ Kostenlos · Kein Account · Sofort</div>
+            <h1>Professionelle QR-Codes<br><span class="grad">selbst gestalten</span></h1>
+            <p>12 QR-Typen, voller Design-Editor, Download als PNG & SVG.<br>Einfach ausfüllen – QR-Code erscheint sofort.</p>
+            <a href="#generator" class="btn-primary btn-lg">Jetzt QR-Code erstellen →</a>
+        </div>
+        <div class="hero-qr">
+            <canvas id="heroQr" width="180" height="180"></canvas>
+        </div>
+    </div>
+</section>
+
+<!-- ====== MAIN GENERATOR ====== -->
+<section class="gen-section" id="generator">
+    <div class="wrap">
+        <div class="gen-layout">
+
+            <!-- LEFT: Controls -->
+            <div class="gen-left">
+
+                <!-- Toolbar: type label + reset -->
+                <div class="gen-toolbar">
+                    <span class="gen-label" id="currentTypeLabel">Website URL</span>
+                    <button class="btn-reset" id="resetBtn" title="Neu starten">↺ Neu</button>
+                </div>
+
+                <!-- TYPE PICKER -->
+                <div class="type-grid">
+                    <button class="type-btn active" data-type="url">🔗<span>URL</span></button>
+                    <button class="type-btn" data-type="text">📝<span>Text</span></button>
+                    <button class="type-btn" data-type="email">✉️<span>E-Mail</span></button>
+                    <button class="type-btn" data-type="sms">💬<span>SMS</span></button>
+                    <button class="type-btn" data-type="phone">📞<span>Tel</span></button>
+                    <button class="type-btn" data-type="wifi">📶<span>Wi-Fi</span></button>
+                    <button class="type-btn" data-type="vcard">📇<span>vCard</span></button>
+                    <button class="type-btn" data-type="event">📅<span>Event</span></button>
+                    <button class="type-btn" data-type="location">📍<span>Ort</span></button>
+                    <button class="type-btn" data-type="pdf">📄<span>PDF</span></button>
+                    <button class="type-btn" data-type="social">📲<span>Social</span></button>
+                    <button class="type-btn" data-type="app">📱<span>App</span></button>
+                </div>
+
+                <!-- DYNAMIC FORMS -->
+                <div class="forms">
+
+                    <div class="form-block active" id="form-url">
+                        <div class="field"><label>Website-URL *</label>
+                            <input id="f-url" type="url" placeholder="https://example.com" autofocus></div>
+                    </div>
+
+                    <div class="form-block" id="form-text">
+                        <div class="field"><label>Text *</label>
+                            <textarea id="f-text" placeholder="Dein Text…" rows="4"></textarea></div>
+                    </div>
+
+                    <div class="form-block" id="form-email">
+                        <div class="field"><label>E-Mail-Adresse *</label>
+                            <input id="f-email-to" type="email" placeholder="empfaenger@example.com"></div>
+                        <div class="field"><label>Betreff</label>
+                            <input id="f-email-sub" type="text" placeholder="Betreff"></div>
+                        <div class="field"><label>Nachricht</label>
+                            <textarea id="f-email-body" placeholder="Deine Nachricht…" rows="3"></textarea></div>
+                    </div>
+
+                    <div class="form-block" id="form-sms">
+                        <div class="field"><label>Telefonnummer *</label>
+                            <input id="f-sms-num" type="tel" placeholder="+49 123 456789"></div>
+                        <div class="field"><label>Nachricht</label>
+                            <textarea id="f-sms-msg" placeholder="Deine SMS…" rows="3"></textarea></div>
+                    </div>
+
+                    <div class="form-block" id="form-phone">
+                        <div class="field"><label>Telefonnummer *</label>
+                            <input id="f-phone" type="tel" placeholder="+49 123 456789"></div>
+                    </div>
+
+                    <div class="form-block" id="form-wifi">
+                        <div class="field"><label>Netzwerkname (SSID) *</label>
+                            <input id="f-wifi-ssid" type="text" placeholder="Mein Netzwerk"></div>
+                        <div class="field"><label>Passwort</label>
+                            <input id="f-wifi-pw" type="text" placeholder="Passwort"></div>
+                        <div class="row2">
+                            <div class="field"><label>Verschlüsselung</label>
+                                <select id="f-wifi-enc"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">Keins</option></select></div>
+                            <div class="field field-check"><label><input id="f-wifi-hidden" type="checkbox"> Verstecktes Netzwerk</label></div>
+                        </div>
+                    </div>
+
+                    <div class="form-block" id="form-vcard">
+                        <div class="row2">
+                            <div class="field"><label>Vorname *</label><input id="f-vc-fn" type="text" placeholder="Max"></div>
+                            <div class="field"><label>Nachname *</label><input id="f-vc-ln" type="text" placeholder="Mustermann"></div>
+                        </div>
+                        <div class="field"><label>Unternehmen</label><input id="f-vc-org" type="text" placeholder="Firma GmbH"></div>
+                        <div class="field"><label>Position</label><input id="f-vc-title" type="text" placeholder="CEO"></div>
+                        <div class="row2">
+                            <div class="field"><label>Telefon</label><input id="f-vc-phone" type="tel" placeholder="+49 123 456789"></div>
+                            <div class="field"><label>E-Mail</label><input id="f-vc-email" type="email" placeholder="max@firma.de"></div>
+                        </div>
+                        <div class="field"><label>Website</label><input id="f-vc-url" type="url" placeholder="https://..."></div>
+                        <div class="field"><label>Adresse</label><input id="f-vc-addr" type="text" placeholder="Musterstr. 1, 12345 Stadt"></div>
+                    </div>
+
+                    <div class="form-block" id="form-event">
+                        <div class="field"><label>Titel *</label><input id="f-ev-title" type="text" placeholder="Mein Event"></div>
+                        <div class="field"><label>Ort</label><input id="f-ev-loc" type="text" placeholder="Berlin, Deutschland"></div>
+                        <div class="row2">
+                            <div class="field"><label>Start *</label><input id="f-ev-start" type="datetime-local"></div>
+                            <div class="field"><label>Ende</label><input id="f-ev-end" type="datetime-local"></div>
+                        </div>
+                        <div class="field"><label>Beschreibung</label><textarea id="f-ev-desc" placeholder="Beschreibung…" rows="2"></textarea></div>
+                    </div>
+
+                    <div class="form-block" id="form-location">
+                        <div class="row2">
+                            <div class="field"><label>Breitengrad *</label><input id="f-lat" type="number" placeholder="52.5200" step="any"></div>
+                            <div class="field"><label>Längengrad *</label><input id="f-lng" type="number" placeholder="13.4050" step="any"></div>
+                        </div>
+                        <p class="hint">Tipp: Rechtsklick auf Google Maps → Koordinaten kopieren</p>
+                    </div>
+
+                    <div class="form-block" id="form-pdf">
+                        <div class="field"><label>PDF-Link *</label><input id="f-pdf" type="url" placeholder="https://example.com/datei.pdf"></div>
+                        <p class="hint">Lade die PDF auf Google Drive, Dropbox o.ä. hoch und füge den öffentlichen Link ein.</p>
+                    </div>
+
+                    <div class="form-block" id="form-social">
+                        <div class="field"><label>Plattform</label>
+                            <select id="f-social-plat">
+                                <option value="https://instagram.com/">Instagram</option>
+                                <option value="https://facebook.com/">Facebook</option>
+                                <option value="https://wa.me/">WhatsApp</option>
+                                <option value="https://x.com/">Twitter / X</option>
+                                <option value="https://linkedin.com/in/">LinkedIn</option>
+                                <option value="https://tiktok.com/@">TikTok</option>
+                                <option value="https://youtube.com/@">YouTube</option>
+                                <option value="https://t.me/">Telegram</option>
+                                <option value="https://snapchat.com/add/">Snapchat</option>
+                                <option value="https://pinterest.com/">Pinterest</option>
+                                <option value="https://github.com/">GitHub</option>
+                                <option value="https://xing.com/profile/">XING</option>
+                                <option value="https://open.spotify.com/user/">Spotify</option>
+                                <option value="https://soundcloud.com/">SoundCloud</option>
+                                <option value="https://reddit.com/user/">Reddit</option>
+                                <option value="https://twitch.tv/">Twitch</option>
+                            </select></div>
+                        <div class="field"><label>Benutzername *</label><input id="f-social-user" type="text" placeholder="deinbenutzername"></div>
+                        <div class="field"><label>Generierte URL</label><input id="f-social-url" type="text" readonly class="readonly-field"></div>
+                    </div>
+
+                    <div class="form-block" id="form-app">
+                        <div class="field"><label>App Store (iOS)</label><input id="f-app-ios" type="url" placeholder="https://apps.apple.com/..."></div>
+                        <div class="field"><label>Play Store (Android)</label><input id="f-app-and" type="url" placeholder="https://play.google.com/..."></div>
+                        <p class="hint">Der iOS-Link hat Vorrang, falls angegeben.</p>
+                    </div>
+
+                </div><!-- /forms -->
+
+                <!-- ===== DESIGN OPTIONS ===== -->
+                <div class="design-section">
+                    <div class="ds-header" id="designToggle">
+                        <span>🎨 Design anpassen</span>
+                        <span class="ds-arrow" id="designArrow">▼</span>
+                    </div>
+                    <div class="ds-body" id="designBody">
+
+                        <!-- Colors: 5 independent pickers -->
+                        <div class="color-grid">
+                            <div class="ds-item">
+                                <label>Punkte</label>
+                                <div class="color-pair">
+                                    <input type="color" id="cFg" value="#000000">
+                                    <input type="text" id="cFgHex" class="hex-input" value="#000000" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="ds-item">
+                                <label>Ecke außen</label>
+                                <div class="color-pair">
+                                    <input type="color" id="cEyeOut" value="#000000">
+                                    <input type="text" id="cEyeOutHex" class="hex-input" value="#000000" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="ds-item">
+                                <label>Ecke innen</label>
+                                <div class="color-pair">
+                                    <input type="color" id="cEyeIn" value="#000000">
+                                    <input type="text" id="cEyeInHex" class="hex-input" value="#000000" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="ds-item">
+                                <label>Hintergrund</label>
+                                <div class="color-pair">
+                                    <input type="color" id="cBg" value="#ffffff">
+                                    <input type="text" id="cBgHex" class="hex-input" value="#ffffff" maxlength="7">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transparent background toggle -->
+                        <div class="check-row">
+                            <label class="check-label">
+                                <input type="checkbox" id="transparentBg"> Transparenter Hintergrund (PNG)
+                            </label>
+                        </div>
+
+                        <!-- Gradient controls -->
+                        <div class="ds-group" style="padding-top:10px; margin-bottom:12px;">
+                            <div class="check-row" style="margin-bottom:8px;">
+                                <label class="check-label">
+                                    <input type="checkbox" id="useGradient"> Farbverlauf für Punkte aktivieren
+                                </label>
+                            </div>
+                            <div class="ds-row" id="gradientExtras" style="display:none; margin-top:8px;">
+                                <div class="ds-item">
+                                    <label>Zweite Farbe</label>
+                                    <div class="color-pair">
+                                        <input type="color" id="cFg2" value="#ec4899">
+                                        <input type="text" id="cFg2Hex" class="hex-input" value="#EC4899" maxlength="7">
+                                    </div>
+                                </div>
+                                <div class="ds-item">
+                                    <label>Richtung</label>
+                                    <select id="gradientDir" class="form-input">
+                                        <option value="diag">Diagonal (↗)</option>
+                                        <option value="horiz">Horizontal (➔)</option>
+                                        <option value="vert">Vertikal (⬇)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color presets -->
+                        <div class="preset-row">
+                            <span class="preset-label">Schnell-Vorlagen:</span>
+                            <button class="preset" data-fg="#000000" data-bg="#ffffff" data-eo="#000000" data-ei="#000000" style="background:linear-gradient(135deg,#000 50%,#fff 50%)" title="Klassisch Schwarz"></button>
+                            <button class="preset" data-fg="#6366f1" data-bg="#ffffff" data-eo="#6366f1" data-ei="#6366f1" style="background:linear-gradient(135deg,#6366f1 50%,#fff 50%)" title="Indigo"></button>
+                            <button class="preset" data-fg="#0ea5e9" data-bg="#ffffff" data-eo="#0ea5e9" data-ei="#0ea5e9" style="background:linear-gradient(135deg,#0ea5e9 50%,#fff 50%)" title="Blau"></button>
+                            <button class="preset" data-fg="#10b981" data-bg="#ffffff" data-eo="#10b981" data-ei="#10b981" style="background:linear-gradient(135deg,#10b981 50%,#fff 50%)" title="Grün"></button>
+                            <button class="preset" data-fg="#6366f1" data-bg="#ffffff" data-eo="#dc2626" data-ei="#dc2626" style="background:linear-gradient(135deg,#6366f1 40%,#dc2626 40%,#dc2626 60%,#fff 60%)" title="Indigo + Rote Ecken"></button>
+                            <button class="preset" data-fg="#f59e0b" data-bg="#1a1a2e" data-eo="#f59e0b" data-ei="#f59e0b" style="background:linear-gradient(135deg,#f59e0b 50%,#1a1a2e 50%)" title="Gold/Dunkel"></button>
+                            <button class="preset" data-fg="#ffffff" data-bg="#6366f1" data-eo="#fbbf24" data-ei="#ffffff" style="background:linear-gradient(135deg,#fff 50%,#6366f1 50%)" title="Weiß/Indigo + Gold-Ecken"></button>
+                            <button class="preset" data-fg="#1e293b" data-bg="#f0f9ff" data-eo="#0ea5e9" data-ei="#1e293b" style="background:linear-gradient(135deg,#1e293b 50%,#f0f9ff 50%)" title="Navy + Blaue Ecken"></button>
+                            <button class="preset" data-fg="#dc2626" data-bg="#fff7f7" data-eo="#dc2626" data-ei="#dc2626" style="background:linear-gradient(135deg,#dc2626 50%,#fff7f7 50%)" title="Rot"></button>
+                            <button class="preset" data-fg="#7c3aed" data-bg="#faf5ff" data-eo="#ec4899" data-ei="#7c3aed" style="background:linear-gradient(135deg,#7c3aed 50%,#ec4899 50%)" title="Lila + Pink-Ecken"></button>
+                        </div>
+
+                        <!-- Dot Style -->
+                        <div class="ds-group">
+                            <label>Punkt-Stil</label>
+                            <div class="style-row" id="dotStyleRow">
+                                <button class="style-btn active" data-dot="square">■ Eckig</button>
+                                <button class="style-btn" data-dot="rounded">▣ Abgerundet</button>
+                                <button class="style-btn" data-dot="dots">● Kreise</button>
+                                <button class="style-btn" data-dot="diamond">◆ Rauten</button>
+                                <button class="style-btn" data-dot="lines">▬ Linien</button>
+                            </div>
+                        </div>
+
+                        <!-- Eye Styles: OUTER + INNER separately -->
+                        <div class="ds-group">
+                            <label>Ecken-Stil außen (Ring)</label>
+                            <div class="style-row" id="eyeOuterRow">
+                                <button class="style-btn active" data-eyeouter="square">□ Eckig</button>
+                                <button class="style-btn" data-eyeouter="rounded">◻ Abgerundet</button>
+                                <button class="style-btn" data-eyeouter="circle">◯ Kreis</button>
+                            </div>
+                        </div>
+                        <div class="ds-group">
+                            <label>Ecken-Stil innen (Punkt)</label>
+                            <div class="style-row" id="eyeInnerRow">
+                                <button class="style-btn active" data-eyeinner="square">■ Eckig</button>
+                                <button class="style-btn" data-eyeinner="rounded">▣ Abgerundet</button>
+                                <button class="style-btn" data-eyeinner="circle">● Kreis</button>
+                            </div>
+                        </div>
+
+                        <!-- Frame -->
+                        <div class="ds-group">
+                            <label>Rahmen</label>
+                            <div class="style-row" id="frameStyleRow">
+                                <button class="style-btn active" data-frame="none">Keiner</button>
+                                <button class="style-btn" data-frame="simple">Einfach</button>
+                                <button class="style-btn" data-frame="rounded">Abgerundet</button>
+                                <button class="style-btn" data-frame="badge">+ Label</button>
+                            </div>
+                        </div>
+                        <div class="ds-row" id="frameExtras" style="display:none; flex-wrap:wrap;">
+                            <div class="ds-item">
+                                <label>Rahmenfarbe</label>
+                                <div class="color-pair">
+                                    <input type="color" id="cFrame" value="#6366f1">
+                                    <input type="text" id="cFrameHex" class="hex-input" value="#6366f1" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="ds-item" id="labelTextColorWrap" style="display:none">
+                                <label>Textfarbe</label>
+                                <div class="color-pair">
+                                    <input type="color" id="cLabelText" value="#ffffff">
+                                    <input type="text" id="cLabelTextHex" class="hex-input" value="#ffffff" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="ds-item" id="labelInputWrap" style="display:none">
+                                <label>Beschriftung</label>
+                                <input type="text" id="frameLabel" value="SCAN ME!" class="form-input">
+                            </div>
+                            <div class="ds-item" id="labelFontWrap" style="display:none">
+                                <label>Schriftart</label>
+                                <select id="frameFont" class="form-input">
+                                    <option value="Inter, sans-serif">Inter (Modern)</option>
+                                    <option value="Outfit, sans-serif">Outfit (Clean)</option>
+                                    <option value="Montserrat, sans-serif">Montserrat (Bold)</option>
+                                    <option value="Roboto, sans-serif">Roboto (Klassisch)</option>
+                                    <option value="Pacifico, cursive">Pacifico (Handschrift)</option>
+                                    <option value="'Courier Prime', monospace">Courier (Monospace)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Logo Upload -->
+                        <div class="ds-group">
+                            <label>Logo (optional)</label>
+                            <div class="logo-area" id="logoArea">
+                                <input type="file" id="logoFile" accept="image/*" hidden>
+                                <div class="logo-drop" id="logoDrop">
+                                    <div>⬆️ Bild hochladen</div>
+                                    <button type="button" class="btn-outline-sm" id="logoBtn">Datei wählen</button>
+                                    <div class="hint">PNG, JPG, SVG · max. 2MB</div>
+                                </div>
+                                <div class="logo-loaded hidden" id="logoLoaded">
+                                    <img id="logoImg" alt="">
+                                    <div class="logo-right">
+                                        <label>Größe: <span id="logoSzVal">20</span>%</label>
+                                        <input type="range" id="logoSz" min="10" max="35" value="20">
+                                        <button type="button" class="btn-outline-sm danger" id="logoRemove">✕ Entfernen</button>
+                                    </div>
+                                </div>
+                                <div class="logo-extra-options" style="margin-top:12px;">
+                                    <div class="ds-group" style="padding-top:10px; margin-bottom:8px;">
+                                        <label>Hintergrund-Form des Logos</label>
+                                        <div class="style-row" id="logoBgShapeRow">
+                                            <button class="style-btn active" data-logobgshape="rounded">Abgerundet</button>
+                                            <button class="style-btn" data-logobgshape="circle">Kreis</button>
+                                            <button class="style-btn" data-logobgshape="square">Quadrat</button>
+                                            <button class="style-btn" data-logobgshape="none">Kein Hinterg.</button>
+                                        </div>
+                                    </div>
+                                    <div class="ds-item" style="margin-top:8px;">
+                                        <label>Logo-Hintergrundfarbe</label>
+                                        <div class="color-pair">
+                                            <input type="color" id="cLogoBg" value="#ffffff">
+                                            <input type="text" id="cLogoBgHex" class="hex-input" value="#FFFFFF" maxlength="7">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Error Correction -->
+                        <div class="ds-group">
+                            <label>Fehlerkorrektur</label>
+                            <select id="ecLevel" class="form-input">
+                                <option value="L">L – Niedrig (7%)</option>
+                                <option value="M" selected>M – Mittel (15%) – Standard</option>
+                                <option value="Q">Q – Hoch (25%)</option>
+                                <option value="H">H – Sehr hoch (30%) – bei Logo empfohlen</option>
+                            </select>
+                        </div>
+
+                    </div><!-- /ds-body -->
+                </div><!-- /design-section -->
+
+            </div><!-- /gen-left -->
+
+            <!-- RIGHT: Preview + Download -->
+            <div class="gen-right">
+                <div class="preview-card">
+                    <div class="preview-title">Live-Vorschau</div>
+                    <div class="preview-box" id="previewBox">
+                        <canvas id="qrCanvas" width="260" height="260"></canvas>
+                        <div class="preview-placeholder" id="previewPlaceholder">
+                            <div>📱</div>
+                            <p>QR-Code erscheint hier</p>
+                            <p class="hint">Fülle links die Felder aus</p>
+                        </div>
+                    </div>
+
+                    <!-- Info -->
+                    <div class="qr-info" id="qrInfo" style="display:none">
+                        <div class="info-line"><span>Typ</span><strong id="infoType">–</strong></div>
+                        <div class="info-line"><span>Fehlerkorrektur</span><strong id="infoEc">M</strong></div>
+                        <div class="info-line"><span>Zeichenanzahl</span><strong id="infoLen">–</strong></div>
+                    </div>
+
+                    <!-- Download -->
+                    <div class="dl-section" id="dlSection" style="display:none">
+                        <div class="field" style="margin-bottom:12px">
+                            <label>Dateiname</label>
+                            <input type="text" id="dlFilename" placeholder="mein-qr-code" class="form-input" value="mein-qr-code">
+                        </div>
+                        <div class="dl-sizes">
+                            <span class="dl-label">Auflösung (PNG):</span>
+                            <div class="size-btns">
+                                <button class="size-btn active" data-sz="512">512px</button>
+                                <button class="size-btn" data-sz="1024">1024px</button>
+                                <button class="size-btn" data-sz="2048">2048px</button>
+                            </div>
+                        </div>
+                        <div class="dl-btns">
+                            <button class="btn-dl-png" id="dlPng">⬇ PNG herunterladen</button>
+                            <button class="btn-dl-svg" id="dlSvg">⬇ SVG herunterladen</button>
+                        </div>
+                        <button class="btn-copy" id="copyBtn">📋 In Zwischenablage kopieren</button>
+                        <p class="hint center" style="margin-top:8px">Speicherort: Browser-Downloadordner</p>
+                    </div>
+
+                </div><!-- /preview-card -->
+            </div>
+
+        </div><!-- /gen-layout -->
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+    <div class="wrap">
+        <h2 class="sec-title">Alle Features auf einen Blick</h2>
+        <div class="features-grid">
+            <div class="feat-card">
+                <div class="feat-icon">🎨</div>
+                <h3>Voller Design-Editor</h3>
+                <p>Farben, Punkt-Stile, Ecken-Design, Rahmen, Logo – alles kombinierbar für deinen Markenauftritt.</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">⚡</div>
+                <h3>12 QR-Typen</h3>
+                <p>URL, vCard, Wi-Fi, E-Mail, SMS, Telefon, Event, Standort, PDF, Social Media, App und Freitext.</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">🖨️</div>
+                <h3>Druckfertige Qualität</h3>
+                <p>PNG bis 2048×2048px und skalierbare SVG-Vektorgrafik – scharf auf Visitenkarte und Plakatwand.</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">🔒</div>
+                <h3>100% im Browser</h3>
+                <p>Kein Account, kein Server, keine Datenübertragung. Alles läuft lokal auf deinem Gerät.</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">🏷️</div>
+                <h3>Logo-Einbettung</h3>
+                <p>Lege dein Firmenlogo in die Mitte des QR-Codes. Größe frei einstellbar, hohe Fehlerkorrektur.</p>
+            </div>
+            <div class="feat-card">
+                <div class="feat-icon">📊</div>
+                <h3>Mehrere Rahmen-Stile</h3>
+                <p>Kein Rahmen, einfacher Rahmen, abgerundet oder mit Beschriftung wie „SCAN ME!".</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- QR TYPE OVERVIEW -->
+<section class="types-section" id="types">
+    <div class="wrap">
+        <h2 class="sec-title">Unterstützte QR-Code-Typen</h2>
+        <p class="sec-sub">Klicke auf einen Typ um sofort damit loszulegen</p>
+        <div class="types-grid">
+            <div class="type-card" onclick="jumpToType('url')"><div class="tc-icon">🔗</div><h4>Website URL</h4><p>Jede Webseite, Shop oder Landingpage</p></div>
+            <div class="type-card" onclick="jumpToType('wifi')"><div class="tc-icon">📶</div><h4>Wi-Fi</h4><p>Gäste ohne Passworteingabe einloggen</p></div>
+            <div class="type-card" onclick="jumpToType('vcard')"><div class="tc-icon">📇</div><h4>vCard</h4><p>Kontakt direkt ins Adressbuch</p></div>
+            <div class="type-card" onclick="jumpToType('email')"><div class="tc-icon">✉️</div><h4>E-Mail</h4><p>Vorausgefüllte E-Mail beim Scannen</p></div>
+            <div class="type-card" onclick="jumpToType('sms')"><div class="tc-icon">💬</div><h4>SMS</h4><p>Vorgefertigte Textnachricht</p></div>
+            <div class="type-card" onclick="jumpToType('event')"><div class="tc-icon">📅</div><h4>Event</h4><p>Termin direkt in den Kalender</p></div>
+            <div class="type-card" onclick="jumpToType('location')"><div class="tc-icon">📍</div><h4>Standort</h4><p>Koordinaten für Google Maps</p></div>
+            <div class="type-card" onclick="jumpToType('pdf')"><div class="tc-icon">📄</div><h4>PDF</h4><p>Broschüre, Anleitung oder Datenblatt</p></div>
+            <div class="type-card" onclick="jumpToType('social')"><div class="tc-icon">📲</div><h4>Social Media</h4><p>Instagram, TikTok, LinkedIn & mehr</p></div>
+            <div class="type-card" onclick="jumpToType('app')"><div class="tc-icon">📱</div><h4>App-Download</h4><p>App Store & Google Play</p></div>
+            <div class="type-card" onclick="jumpToType('text')"><div class="tc-icon">📝</div><h4>Text</h4><p>Beliebiger Freitext</p></div>
+            <div class="type-card" onclick="jumpToType('phone')"><div class="tc-icon">📞</div><h4>Telefon</h4><p>Sofortanruf per Scan</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <div class="wrap footer-inner">
+        <div class="footer-logo">
+            <svg viewBox="0 0 32 32" fill="none" width="28"><rect width="32" height="32" rx="8" fill="#6366f1"/><rect x="6" y="6" width="8" height="8" rx="1.5" fill="white"/><rect x="18" y="6" width="8" height="8" rx="1.5" fill="white"/><rect x="6" y="18" width="8" height="8" rx="1.5" fill="white"/><rect x="18" y="18" width="3" height="3" rx="0.5" fill="white"/><rect x="23" y="18" width="3" height="3" rx="0.5" fill="white"/><rect x="18" y="23" width="3" height="3" rx="0.5" fill="white"/></svg>
+            QRCraft
+        </div>
+        <p>Kostenloser QR-Code-Generator · Keine Registrierung · Alle Daten bleiben lokal</p>
+        <p class="footer-copy">© 2026 QRCraft · Made in Germany</p>
+    </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
